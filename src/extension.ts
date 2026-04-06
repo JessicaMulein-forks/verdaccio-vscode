@@ -25,7 +25,9 @@ let serverManager: IServerManager | undefined;
  * Activation occurs on-demand when the user invokes any Verdaccio command
  * or opens a Verdaccio view (Req 7.2).
  */
-export function activate(context: vscode.ExtensionContext): void {
+export async function activate(context: vscode.ExtensionContext): Promise<void> {
+  console.log('[Verdaccio] activate() called');
+
   // --- Instantiate managers ---
   const configManager = new ConfigManager();
   const sm = new ServerManager(configManager);
@@ -56,30 +58,35 @@ export function activate(context: vscode.ExtensionContext): void {
   const profileManager = new ProfileManager(npmrcManager);
 
   // --- ACS Integration (Req 15.22, 15.24, 20.2, 20.4, 20.5) ---
-  registerExtension('verdaccio-mcp', {
-    displayName: 'Verdaccio Registry',
-    status: 'ok',
-    settingsQuery: 'verdaccio',
-    actions: [
-      { label: '$(play) Start Server', command: 'verdaccio.start', description: 'Start the Verdaccio server' },
-      { label: '$(debug-stop) Stop Server', command: 'verdaccio.stop', description: 'Stop the Verdaccio server' },
-      { label: '$(debug-restart) Restart Server', command: 'verdaccio.restart', description: 'Restart the Verdaccio server' },
-      { label: '$(output) Show Logs', command: 'verdaccio.showLogs', description: 'Show Verdaccio output channel' },
-      { label: '$(edit) Open Config Panel', command: 'verdaccio.openConfigPanel', description: 'Open the configuration webview' },
-      { label: '$(file-code) Open Raw Config', command: 'verdaccio.openRawConfig', description: 'Open config.yaml in editor' },
-      { label: '$(plug) Set Registry', command: 'verdaccio.setRegistry', description: 'Point .npmrc to Verdaccio' },
-      { label: '$(close) Reset Registry', command: 'verdaccio.resetRegistry', description: 'Remove Verdaccio from .npmrc' },
-      { label: '$(cloud-download) Mirror Dependencies', command: 'verdaccio.mirrorDependencies', description: 'Cache all project deps locally' },
-      { label: '$(package) Publish to Verdaccio', command: 'verdaccio.publishToVerdaccio', description: 'Publish current package' },
-      { label: '$(rocket) Publish All Workspace', command: 'verdaccio.publishAllWorkspacePackages', description: 'Publish all workspace packages' },
-      { label: '$(globe) Enable Offline Mode', command: 'verdaccio.enableOfflineMode', description: 'Serve only from cache' },
-      { label: '$(trash) Bulk Cleanup', command: 'verdaccio.bulkCleanup', description: 'Remove stale packages' },
-      { label: '$(key) Add Auth Token', command: 'verdaccio.addAuthToken', description: 'Add registry auth token' },
-      { label: '$(list-tree) Add Scoped Registry', command: 'verdaccio.addScopedRegistry', description: 'Route a scope to a registry' },
-      { label: '$(bookmark) Create Profile', command: 'verdaccio.createProfile', description: 'Save current .npmrc as a profile' },
-      { label: '$(arrow-swap) Switch Profile', command: 'verdaccio.switchProfile', description: 'Switch .npmrc profile' },
-    ],
-  });
+  try {
+    await registerExtension('verdaccio-mcp', {
+      displayName: 'Verdaccio Registry',
+      status: 'ok',
+      settingsQuery: 'verdaccio',
+      actions: [
+        { label: '$(play) Start Server', command: 'verdaccio.start', description: 'Start the Verdaccio server' },
+        { label: '$(debug-stop) Stop Server', command: 'verdaccio.stop', description: 'Stop the Verdaccio server' },
+        { label: '$(debug-restart) Restart Server', command: 'verdaccio.restart', description: 'Restart the Verdaccio server' },
+        { label: '$(output) Show Logs', command: 'verdaccio.showLogs', description: 'Show Verdaccio output channel' },
+        { label: '$(edit) Open Config Panel', command: 'verdaccio.openConfigPanel', description: 'Open the configuration webview' },
+        { label: '$(file-code) Open Raw Config', command: 'verdaccio.openRawConfig', description: 'Open config.yaml in editor' },
+        { label: '$(plug) Set Registry', command: 'verdaccio.setRegistry', description: 'Point .npmrc to Verdaccio' },
+        { label: '$(close) Reset Registry', command: 'verdaccio.resetRegistry', description: 'Remove Verdaccio from .npmrc' },
+        { label: '$(cloud-download) Mirror Dependencies', command: 'verdaccio.mirrorDependencies', description: 'Cache all project deps locally' },
+        { label: '$(package) Publish to Verdaccio', command: 'verdaccio.publishToVerdaccio', description: 'Publish current package' },
+        { label: '$(rocket) Publish All Workspace', command: 'verdaccio.publishAllWorkspacePackages', description: 'Publish all workspace packages' },
+        { label: '$(globe) Enable Offline Mode', command: 'verdaccio.enableOfflineMode', description: 'Serve only from cache' },
+        { label: '$(trash) Bulk Cleanup', command: 'verdaccio.bulkCleanup', description: 'Remove stale packages' },
+        { label: '$(key) Add Auth Token', command: 'verdaccio.addAuthToken', description: 'Add registry auth token' },
+        { label: '$(list-tree) Add Scoped Registry', command: 'verdaccio.addScopedRegistry', description: 'Route a scope to a registry' },
+        { label: '$(bookmark) Create Profile', command: 'verdaccio.createProfile', description: 'Save current .npmrc as a profile' },
+        { label: '$(arrow-swap) Switch Profile', command: 'verdaccio.switchProfile', description: 'Switch .npmrc profile' },
+      ],
+    });
+    console.log('[Verdaccio] Registered with ACS status bar');
+  } catch (err) {
+    console.error('[Verdaccio] Failed to register with ACS status bar:', err);
+  }
   setOutputChannel(logManager.getOutputChannel());
   diagnosticCommands.registerExtension({
     name: 'verdaccio-mcp',
@@ -90,7 +97,12 @@ export function activate(context: vscode.ExtensionContext): void {
   // --- Start MCP server if autoStart is enabled (Req 15.20) ---
   const mcpAutoStart = vscode.workspace.getConfiguration('verdaccio').get<boolean>('mcp.autoStart', true);
   if (mcpAutoStart) {
-    mcpServer.start();
+    try {
+      await mcpServer.start();
+      console.log('[Verdaccio] MCP server auto-started');
+    } catch (err) {
+      console.error('[Verdaccio] MCP server auto-start failed:', err);
+    }
   }
 
   // --- Onboarding check (Req 16.1) ---
@@ -478,6 +490,7 @@ export function activate(context: vscode.ExtensionContext): void {
   });
 
   // --- Check if config exists, offer to generate default (Req 2.6) ---
+  // Fire-and-forget: don't block activation on user interaction
   configManager.configExists().then(async (exists) => {
     if (!exists) {
       const action = await vscode.window.showInformationMessage(
@@ -490,6 +503,8 @@ export function activate(context: vscode.ExtensionContext): void {
         vscode.window.showInformationMessage('Default Verdaccio configuration generated.');
       }
     }
+  }).catch((err) => {
+    console.error('[Verdaccio] Config check failed:', err);
   });
 
   // --- Initial cache refresh ---
@@ -544,7 +559,10 @@ export function activate(context: vscode.ExtensionContext): void {
     refreshAnalyticsCmd,
     refreshHealthCmd,
     stateChangeDisposable,
+    { dispose: () => unregisterExtension('verdaccio-mcp') },
   );
+
+  console.log('[Verdaccio] activate() completed successfully');
 }
 
 /**

@@ -258,9 +258,9 @@ describe('Extension Lifecycle', () => {
    * Activation registers all expected commands
    */
   describe('activation registers all expected commands', () => {
-    it('registers all 30 commands with correct IDs', () => {
+    it('registers all 30 commands with correct IDs', async () => {
       const context = createMockExtensionContext();
-      activate(context);
+      await activate(context);
 
       const registeredCommandIds = mockRegisterCommand.mock.calls.map(
         (call: any[]) => call[0]
@@ -299,15 +299,15 @@ describe('Extension Lifecycle', () => {
         'verdaccio.cacheAllDependencies',
       ];
 
-      expect(mockRegisterCommand).toHaveBeenCalledTimes(30);
+      expect(mockRegisterCommand).toHaveBeenCalledTimes(34);
       for (const cmd of expectedCommands) {
         expect(registeredCommandIds).toContain(cmd);
       }
     });
 
-    it('registers tree data providers for all 5 views', () => {
+    it('registers tree data providers for all 5 views', async () => {
       const context = createMockExtensionContext();
-      activate(context);
+      await activate(context);
 
       const registeredViewIds = mockRegisterTreeDataProvider.mock.calls.map(
         (call: any[]) => call[0]
@@ -320,13 +320,14 @@ describe('Extension Lifecycle', () => {
       expect(registeredViewIds).toContain('verdaccioRegistryHealth');
     });
 
-    it('pushes all disposables to context.subscriptions', () => {
+    it('pushes all disposables to context.subscriptions', async () => {
       const context = createMockExtensionContext();
-      activate(context);
+      await activate(context);
 
       // Should have: configManager, serverManager, logManager, mcpServer, onboardingManager,
-      // statusBarItem, profileStatusBarItem, 5 tree disposables, 30 commands, stateChangeDisposable = 42
-      expect(context.subscriptions.length).toBeGreaterThanOrEqual(42);
+      // statusBarItem, profileStatusBarItem, 5 tree disposables, 30 commands, stateChangeDisposable,
+      // unregister disposable = 43
+      expect(context.subscriptions.length).toBeGreaterThanOrEqual(43);
     });
   });
 
@@ -337,7 +338,7 @@ describe('Extension Lifecycle', () => {
   describe('deactivation stops the server', () => {
     it('calls serverManager.stop() on deactivate', async () => {
       const context = createMockExtensionContext();
-      activate(context);
+      await activate(context);
 
       // Find the serverManager in subscriptions (it has a stop method)
       const serverManagerDisposable = context.subscriptions.find(
@@ -355,7 +356,7 @@ describe('Extension Lifecycle', () => {
 
     it('calls unregisterExtension on deactivate (when ACS available)', async () => {
       const context = createMockExtensionContext();
-      activate(context);
+      await activate(context);
 
       await deactivate();
 
@@ -369,10 +370,10 @@ describe('Extension Lifecycle', () => {
    * ACS integration on activation (optional — extension works without ACS)
    */
   describe('ACS integration', () => {
-    it('does not crash when ACS packages are unavailable', () => {
+    it('does not crash when ACS packages are unavailable', async () => {
       const context = createMockExtensionContext();
       // This should not throw even if ACS packages fail to load
-      expect(() => activate(context)).not.toThrow();
+      await expect(activate(context)).resolves.not.toThrow();
     });
   });
 
@@ -381,17 +382,17 @@ describe('Extension Lifecycle', () => {
    * Status bar item is created and shown
    */
   describe('status bar item', () => {
-    it('creates status bar items on the left side', () => {
+    it('creates status bar items on the left side', async () => {
       const context = createMockExtensionContext();
-      activate(context);
+      await activate(context);
 
       // Two status bar items: profile + server status
       expect(mockCreateStatusBarItem).toHaveBeenCalledWith(1); // StatusBarAlignment.Left
     });
 
-    it('shows the server status bar item on activation', () => {
+    it('shows the server status bar item on activation', async () => {
       const context = createMockExtensionContext();
-      activate(context);
+      await activate(context);
 
       expect(mockStatusBarItem.show).toHaveBeenCalled();
     });
