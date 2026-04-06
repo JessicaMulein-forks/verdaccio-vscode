@@ -235,8 +235,8 @@ describe('Extension Lifecycle', () => {
     mockRegisterCommand.mockReturnValue({ dispose: vi.fn() });
     mockRegisterTreeDataProvider.mockReturnValue({ dispose: vi.fn() });
     mockCreateStatusBarItem
-      .mockReturnValueOnce(mockProfileStatusBarItem)
       .mockReturnValueOnce(mockStatusBarItem)
+      .mockReturnValueOnce(mockProfileStatusBarItem)
       .mockReturnValue(mockStatusBarItem);
     mockShowInformationMessage.mockResolvedValue(undefined);
     mockGetConfiguration.mockReturnValue({
