@@ -30,6 +30,9 @@ const RAW_RUNTIME_STATE =
         "packageDependencies": [\
           ["@ai-capabilities-suite/mcp-client-base", "virtual:a25f9f3484a7ff0aad53d1b29ab74f5da49953a15f8b17997da010f936c1cc4d77e519d7591c8caeea8c332b4e75c02e9ccadbdc70dd6d9b80f5f1747421c3f8#npm:1.0.2"],\
           ["@ai-capabilities-suite/vscode-shared-status-bar", "virtual:a25f9f3484a7ff0aad53d1b29ab74f5da49953a15f8b17997da010f936c1cc4d77e519d7591c8caeea8c332b4e75c02e9ccadbdc70dd6d9b80f5f1747421c3f8#npm:1.0.21"],\
+          ["@secretlint/secretlint-formatter-sarif", "npm:11.5.0"],\
+          ["@secretlint/secretlint-rule-no-dotenv", "npm:11.5.0"],\
+          ["@secretlint/secretlint-rule-preset-recommend", "npm:11.4.1"],\
           ["@types/js-yaml", "npm:4.0.9"],\
           ["@types/node", "npm:25.5.2"],\
           ["@types/vscode", "npm:1.110.0"],\
@@ -1098,6 +1101,14 @@ const RAW_RUNTIME_STATE =
           ["node-sarif-builder", "npm:3.4.0"]\
         ],\
         "linkType": "HARD"\
+      }],\
+      ["npm:11.5.0", {\
+        "packageLocation": "../../../Users/jessica/.yarn/berry/cache/@secretlint-secretlint-formatter-sarif-npm-11.5.0-d953a7a3ea-10c0.zip/node_modules/@secretlint/secretlint-formatter-sarif/",\
+        "packageDependencies": [\
+          ["@secretlint/secretlint-formatter-sarif", "npm:11.5.0"],\
+          ["node-sarif-builder", "npm:3.4.0"]\
+        ],\
+        "linkType": "HARD"\
       }]\
     ]],\
     ["@secretlint/secretlint-rule-no-dotenv", [\
@@ -1108,6 +1119,14 @@ const RAW_RUNTIME_STATE =
           ["@secretlint/types", "npm:10.2.2"]\
         ],\
         "linkType": "HARD"\
+      }],\
+      ["npm:11.5.0", {\
+        "packageLocation": "../../../Users/jessica/.yarn/berry/cache/@secretlint-secretlint-rule-no-dotenv-npm-11.5.0-73be5fafd1-10c0.zip/node_modules/@secretlint/secretlint-rule-no-dotenv/",\
+        "packageDependencies": [\
+          ["@secretlint/secretlint-rule-no-dotenv", "npm:11.5.0"],\
+          ["@secretlint/types", "npm:11.5.0"]\
+        ],\
+        "linkType": "HARD"\
       }]\
     ]],\
     ["@secretlint/secretlint-rule-preset-recommend", [\
@@ -1115,6 +1134,13 @@ const RAW_RUNTIME_STATE =
         "packageLocation": "../../../Users/jessica/.yarn/berry/cache/@secretlint-secretlint-rule-preset-recommend-npm-10.2.2-0b9aaeab89-10c0.zip/node_modules/@secretlint/secretlint-rule-preset-recommend/",\
         "packageDependencies": [\
           ["@secretlint/secretlint-rule-preset-recommend", "npm:10.2.2"]\
+        ],\
+        "linkType": "HARD"\
+      }],\
+      ["npm:11.4.1", {\
+        "packageLocation": "../../../Users/jessica/.yarn/berry/cache/@secretlint-secretlint-rule-preset-recommend-npm-11.4.1-840b89cfe9-10c0.zip/node_modules/@secretlint/secretlint-rule-preset-recommend/",\
+        "packageDependencies": [\
+          ["@secretlint/secretlint-rule-preset-recommend", "npm:11.4.1"]\
         ],\
         "linkType": "HARD"\
       }]\
@@ -1135,6 +1161,13 @@ const RAW_RUNTIME_STATE =
         "packageLocation": "../../../Users/jessica/.yarn/berry/cache/@secretlint-types-npm-10.2.2-dbab810d6f-10c0.zip/node_modules/@secretlint/types/",\
         "packageDependencies": [\
           ["@secretlint/types", "npm:10.2.2"]\
+        ],\
+        "linkType": "HARD"\
+      }],\
+      ["npm:11.5.0", {\
+        "packageLocation": "../../../Users/jessica/.yarn/berry/cache/@secretlint-types-npm-11.5.0-d656535cdd-10c0.zip/node_modules/@secretlint/types/",\
+        "packageDependencies": [\
+          ["@secretlint/types", "npm:11.5.0"]\
         ],\
         "linkType": "HARD"\
       }]\
@@ -5082,6 +5115,9 @@ const RAW_RUNTIME_STATE =
         "packageDependencies": [\
           ["@ai-capabilities-suite/mcp-client-base", "virtual:a25f9f3484a7ff0aad53d1b29ab74f5da49953a15f8b17997da010f936c1cc4d77e519d7591c8caeea8c332b4e75c02e9ccadbdc70dd6d9b80f5f1747421c3f8#npm:1.0.2"],\
           ["@ai-capabilities-suite/vscode-shared-status-bar", "virtual:a25f9f3484a7ff0aad53d1b29ab74f5da49953a15f8b17997da010f936c1cc4d77e519d7591c8caeea8c332b4e75c02e9ccadbdc70dd6d9b80f5f1747421c3f8#npm:1.0.21"],\
+          ["@secretlint/secretlint-formatter-sarif", "npm:11.5.0"],\
+          ["@secretlint/secretlint-rule-no-dotenv", "npm:11.5.0"],\
+          ["@secretlint/secretlint-rule-preset-recommend", "npm:11.4.1"],\
           ["@types/js-yaml", "npm:4.0.9"],\
           ["@types/node", "npm:25.5.2"],\
           ["@types/vscode", "npm:1.110.0"],\

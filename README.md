@@ -1,6 +1,6 @@
 # MCP ACS Verdaccio
 
-Manage a local [Verdaccio](https://verdaccio.org/) npm registry directly from VS Code with full AI agent integration through MCP. Part of the [Digital Defiance AI Capabilities Suite](https://github.com/Digital-Defiance/ai-capabilitities-suite).
+Manage a local [Verdaccio](https://verdaccio.org/) npm registry directly from VS Code with full AI agent integration through MCP. Part of the [Digital Defiance AI Capabilities Suite](https://github.com/Digital-Defiance/ai-capabilities-suite).
 
 ## Features
 
