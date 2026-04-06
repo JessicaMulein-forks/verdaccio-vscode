@@ -1,0 +1,23 @@
+<svg width="24" height="24" viewBox="15 25 70 58" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Monochrome Verdaccio "V" logo for VS Code sidebar -->
+  <!-- Derived from the Verdaccio project logo (MIT licensed) -->
+
+  <!-- Main V shape (the yellow part in original) -->
+  <path d="M55.6351 70.688L53.0607 75.8H45.7416L23.3416 31H35.8573L55.6351 70.688Z"
+        fill="currentColor" stroke="currentColor" stroke-width="2.4"/>
+
+  <!-- Upper-right blue chevron -->
+  <path fill-rule="evenodd" clip-rule="evenodd"
+        d="M69 46.6L53.8 77H45L21.4 29.8L36.6 29.8L49.4 55.4L53.8 46.6H69Z"
+        fill="currentColor" fill-opacity="0.5"/>
+
+  <!-- Top-right parallelogram -->
+  <path fill-rule="evenodd" clip-rule="evenodd"
+        d="M71.8 41H56.6L62.2 29.8L77.4 29.8L71.8 41Z"
+        fill="currentColor"/>
+
+  <!-- Horizontal stripes -->
+  <path d="M58.6 31H73.821" stroke="currentColor" stroke-width="2.4" stroke-linecap="square" opacity="0.7"/>
+  <path d="M54.6 35H69.821" stroke="currentColor" stroke-width="2.4" stroke-linecap="square" opacity="0.7"/>
+  <path d="M50.6 39.8H65.821" stroke="currentColor" stroke-width="2.4" stroke-linecap="square" opacity="0.7"/>
+</svg>

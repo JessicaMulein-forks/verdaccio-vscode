@@ -1,0 +1,678 @@
+{
+  "name": "vscode-mcp-acs-verdaccio",
+  "displayName": "MCP ACS Verdaccio",
+  "description": "Manage a local Verdaccio npm registry from VS Code with full AI agent integration through MCP. Part of the Digital Defiance AI Capabilities Suite.",
+  "version": "0.0.1",
+  "publisher": "DigitalDefiance",
+  "homepage": "https://github.com/Digital-Defiance/vscode-mcp-acs-verdaccio",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Digital-Defiance/vscode-mcp-acs-verdaccio.git"
+  },
+  "license": "MIT",
+  "icon": "resources/icon.png",
+  "keywords": [
+    "verdaccio",
+    "registry",
+    "npm",
+    "mcp",
+    "mcp-server",
+    "ai-agent",
+    "copilot",
+    "ai-capabilities-suite",
+    "acs",
+    "offline-development",
+    "monorepo",
+    "cache-management",
+    "private-registry"
+  ],
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "verdaccio.start",
+        "title": "Start Verdaccio",
+        "category": "Verdaccio"
+      },
+      {
+        "command": "verdaccio.stop",
+        "title": "Stop Verdaccio",
+        "category": "Verdaccio"
+      },
+      {
+        "command": "verdaccio.restart",
+        "title": "Restart Verdaccio",
+        "category": "Verdaccio"
+      },
+      {
+        "command": "verdaccio.showLogs",
+        "title": "Show Verdaccio Logs",
+        "category": "Verdaccio"
+      },
+      {
+        "command": "verdaccio.openRawConfig",
+        "title": "Open Raw Config",
+        "category": "Verdaccio"
+      },
+      {
+        "command": "verdaccio.openConfigPanel",
+        "title": "Open Configuration Panel",
+        "category": "Verdaccio"
+      },
+      {
+        "command": "verdaccio.setRegistry",
+        "title": "Set Registry",
+        "category": "Verdaccio"
+      },
+      {
+        "command": "verdaccio.resetRegistry",
+        "title": "Reset Registry",
+        "category": "Verdaccio"
+      },
+      {
+        "command": "verdaccio.deletePackage",
+        "title": "Delete Package",
+        "category": "Verdaccio"
+      },
+      {
+        "command": "verdaccio.addScopedRegistry",
+        "title": "Add Scoped Registry",
+        "category": "Verdaccio"
+      },
+      {
+        "command": "verdaccio.editScopedRegistry",
+        "title": "Edit Scoped Registry",
+        "category": "Verdaccio"
+      },
+      {
+        "command": "verdaccio.removeScopedRegistry",
+        "title": "Remove Scoped Registry",
+        "category": "Verdaccio"
+      },
+      {
+        "command": "verdaccio.addAuthToken",
+        "title": "Add Auth Token",
+        "category": "Verdaccio"
+      },
+      {
+        "command": "verdaccio.rotateAuthToken",
+        "title": "Rotate Auth Token",
+        "category": "Verdaccio"
+      },
+      {
+        "command": "verdaccio.removeAuthToken",
+        "title": "Remove Auth Token",
+        "category": "Verdaccio"
+      },
+      {
+        "command": "verdaccio.revealToken",
+        "title": "Reveal Auth Token",
+        "category": "Verdaccio"
+      },
+      {
+        "command": "verdaccio.enableOfflineMode",
+        "title": "Enable Offline Mode",
+        "category": "Verdaccio"
+      },
+      {
+        "command": "verdaccio.disableOfflineMode",
+        "title": "Disable Offline Mode",
+        "category": "Verdaccio"
+      },
+      {
+        "command": "verdaccio.pruneOldVersions",
+        "title": "Prune Old Versions",
+        "category": "Verdaccio"
+      },
+      {
+        "command": "verdaccio.bulkCleanup",
+        "title": "Bulk Cleanup Stale Packages",
+        "category": "Verdaccio"
+      },
+      {
+        "command": "verdaccio.publishToVerdaccio",
+        "title": "Publish to Verdaccio",
+        "category": "Verdaccio"
+      },
+      {
+        "command": "verdaccio.promotePackage",
+        "title": "Promote Package",
+        "category": "Verdaccio"
+      },
+      {
+        "command": "verdaccio.bumpVersion",
+        "title": "Bump Version",
+        "category": "Verdaccio"
+      },
+      {
+        "command": "verdaccio.publishAllWorkspacePackages",
+        "title": "Publish All Workspace Packages",
+        "category": "Verdaccio"
+      },
+      {
+        "command": "verdaccio.unpublishAllWorkspacePackages",
+        "title": "Unpublish All Workspace Packages",
+        "category": "Verdaccio"
+      },
+      {
+        "command": "verdaccio.createProfile",
+        "title": "Create Profile",
+        "category": "Verdaccio"
+      },
+      {
+        "command": "verdaccio.switchProfile",
+        "title": "Switch Profile",
+        "category": "Verdaccio"
+      },
+      {
+        "command": "verdaccio.deleteProfile",
+        "title": "Delete Profile",
+        "category": "Verdaccio"
+      },
+      {
+        "command": "verdaccio.mirrorDependencies",
+        "title": "Mirror Dependencies",
+        "category": "Verdaccio"
+      },
+      {
+        "command": "verdaccio.cacheAllDependencies",
+        "title": "Cache All Project Dependencies",
+        "category": "Verdaccio"
+      },
+      {
+        "command": "verdaccio.openSettings",
+        "title": "Open Verdaccio Settings",
+        "category": "Verdaccio",
+        "icon": "$(settings-gear)"
+      },
+      {
+        "command": "verdaccio.refreshCache",
+        "title": "Refresh Cache",
+        "category": "Verdaccio",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "verdaccio.refreshAnalytics",
+        "title": "Refresh Analytics",
+        "category": "Verdaccio",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "verdaccio.refreshHealth",
+        "title": "Refresh Health",
+        "category": "Verdaccio",
+        "icon": "$(refresh)"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "verdaccio",
+          "title": "Verdaccio",
+          "icon": "resources/verdaccio.svg"
+        }
+      ]
+    },
+    "views": {
+      "verdaccio": [
+        {
+          "id": "verdaccioStatus",
+          "name": "Status"
+        },
+        {
+          "id": "verdaccioCache",
+          "name": "Cache"
+        },
+        {
+          "id": "verdaccioStorageAnalytics",
+          "name": "Storage Analytics"
+        },
+        {
+          "id": "verdaccioWorkspacePackages",
+          "name": "Workspace Packages"
+        },
+        {
+          "id": "verdaccioRegistryHealth",
+          "name": "Registry Health"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Verdaccio",
+      "properties": {
+        "verdaccio.configPath": {
+          "type": "string",
+          "default": ".verdaccio/config.yaml",
+          "markdownDescription": "Path to the Verdaccio configuration file, relative to the workspace root.\n\n**Note:** Changes require extension reload."
+        },
+        "verdaccio.server.autoStart": {
+          "type": "boolean",
+          "default": false,
+          "markdownDescription": "Automatically start the Verdaccio server when the extension activates."
+        },
+        "verdaccio.server.port": {
+          "type": "number",
+          "default": 4873,
+          "markdownDescription": "Default port for the Verdaccio server.\n\n**Default:** 4873"
+        },
+        "verdaccio.server.shutdownTimeoutMs": {
+          "type": "number",
+          "default": 5000,
+          "markdownDescription": "Timeout in milliseconds before force-killing the server on shutdown.\n\n**Default:** 5000 ms (5 seconds)"
+        },
+        "verdaccio.server.logLevel": {
+          "type": "string",
+          "enum": ["trace", "debug", "info", "warn", "error", "fatal"],
+          "default": "warn",
+          "markdownDescription": "Log level for the Verdaccio server output channel.\n\nOnly log entries at or above this level are displayed."
+        },
+        "verdaccio.registry.autoSetRegistry": {
+          "type": "boolean",
+          "default": false,
+          "markdownDescription": "Automatically configure the workspace `.npmrc` to use Verdaccio when the server starts, and reset when it stops."
+        },
+        "verdaccio.registry.autoSetOnStart": {
+          "type": "boolean",
+          "default": false,
+          "markdownDescription": "Automatically set the npm registry to Verdaccio when the server starts."
+        },
+        "verdaccio.registry.autoResetOnStop": {
+          "type": "boolean",
+          "default": false,
+          "markdownDescription": "Automatically reset the npm registry when the Verdaccio server stops."
+        },
+        "verdaccio.storage.warningThresholdMb": {
+          "type": "number",
+          "default": 500,
+          "markdownDescription": "Show a warning notification when total storage usage exceeds this threshold.\n\n**Default:** 500 MB"
+        },
+        "verdaccio.storage.stalenessThresholdDays": {
+          "type": "number",
+          "default": 90,
+          "markdownDescription": "Number of days after which a package version is considered stale and eligible for cleanup.\n\n**Default:** 90 days"
+        },
+        "verdaccio.storage.defaultKeepVersions": {
+          "type": "number",
+          "default": 3,
+          "markdownDescription": "Default number of recent versions to keep when pruning old versions.\n\n**Default:** 3"
+        },
+        "verdaccio.cache.autoRefreshOnPublish": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Automatically refresh the cache view when a package is published to Verdaccio."
+        },
+        "verdaccio.cache.watchStorageDirectory": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Watch the storage directory for changes and auto-refresh the cache view.\n\n**Note:** Disabling this may improve performance for very large registries."
+        },
+        "verdaccio.cache.watchDebounceMs": {
+          "type": "number",
+          "default": 5000,
+          "markdownDescription": "Debounce interval in milliseconds for storage directory file watcher.\n\n**Default:** 5000 ms (5 seconds)"
+        },
+        "verdaccio.mcp.autoStart": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Automatically start the MCP server when the extension activates.\n\nThis allows AI coding agents to control the registry."
+        },
+        "verdaccio.mcp.logCommunication": {
+          "type": "boolean",
+          "default": false,
+          "markdownDescription": "Log all MCP tool call requests and responses to the output channel.\n\n**Warning:** This can be verbose."
+        },
+        "verdaccio.health.enabled": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Enable registry health monitoring.\n\nPeriodically pings configured uplinks to check connectivity."
+        },
+        "verdaccio.health.pingIntervalMs": {
+          "type": "number",
+          "default": 30000,
+          "markdownDescription": "Interval in milliseconds between registry health pings.\n\n**Default:** 30000 ms (30 seconds)"
+        },
+        "verdaccio.health.latencyThresholdMs": {
+          "type": "number",
+          "default": 500,
+          "markdownDescription": "Latency threshold in milliseconds. Uplinks with latency above this are marked as degraded.\n\n**Default:** 500 ms"
+        },
+        "verdaccio.health.failureThreshold": {
+          "type": "number",
+          "default": 3,
+          "markdownDescription": "Number of consecutive failures before an uplink is marked as degraded.\n\n**Default:** 3"
+        },
+        "verdaccio.health.autoSuggestOffline": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Suggest enabling offline mode when all uplinks are unreachable."
+        },
+        "verdaccio.onboarding.enabled": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Show the onboarding prompt when a workspace with `.verdaccio/config.yaml` is opened for the first time."
+        },
+        "verdaccio.onboarding.autoMirror": {
+          "type": "boolean",
+          "default": false,
+          "markdownDescription": "Automatically mirror all project dependencies during onboarding without prompting."
+        },
+        "verdaccio.publish.checkDuplicates": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Check for duplicate package@version before publishing and warn if it already exists."
+        },
+        "verdaccio.publish.showNotifications": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Show success/error notifications after publish operations."
+        },
+        "verdaccio.profiles.showInStatusBar": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Show the active `.npmrc` profile name in the VS Code status bar."
+        },
+        "verdaccio.ui.showStatusBarItem": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Show the Verdaccio server status in the VS Code status bar."
+        },
+        "verdaccio.ui.confirmDangerousOperations": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Require confirmation before destructive operations like deleting packages or bulk cleanup."
+        },
+        "verdaccio.ui.showNotifications": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Show notification messages for extension operations."
+        },
+        "verdaccio.uplinks.defaultTimeout": {
+          "type": "string",
+          "default": "30s",
+          "markdownDescription": "Default timeout for uplink requests.\n\n**Example:** `30s`, `1m`"
+        },
+        "verdaccio.uplinks.defaultMaxRetries": {
+          "type": "number",
+          "default": 5,
+          "markdownDescription": "Default maximum number of retries for failed uplink requests.\n\n**Default:** 5"
+        },
+        "verdaccio.uplinks.defaultMaxage": {
+          "type": "string",
+          "default": "2m",
+          "markdownDescription": "Default cache TTL (maxage) for uplink packages.\n\n**Example:** `2m`, `1h`, `9999d` (cache-first)"
+        },
+        "verdaccio.uplinks.defaultFailTimeout": {
+          "type": "string",
+          "default": "5m",
+          "markdownDescription": "Default time to wait before retrying a failed uplink.\n\n**Example:** `5m`, `30s`"
+        },
+        "verdaccio.proxy.httpProxy": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Global HTTP proxy URL for uplink requests.\n\n**Example:** `http://proxy.corp.com:8080`\n\nLeave empty to disable."
+        },
+        "verdaccio.proxy.httpsProxy": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Global HTTPS proxy URL for uplink requests.\n\n**Example:** `https://proxy.corp.com:8443`\n\nLeave empty to disable."
+        },
+        "verdaccio.proxy.noProxy": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Comma-separated list of hostnames or IP ranges that bypass the proxy.\n\n**Example:** `localhost,127.0.0.1,.internal`"
+        },
+        "verdaccio.defaultConfig.listenAddress": {
+          "type": "string",
+          "default": "0.0.0.0:4873",
+          "markdownDescription": "Default listen address for generated Verdaccio configs.\n\n**Example:** `0.0.0.0:4873`, `127.0.0.1:4873`"
+        },
+        "verdaccio.defaultConfig.storagePath": {
+          "type": "string",
+          "default": "./storage",
+          "markdownDescription": "Default storage directory path for generated Verdaccio configs.\n\nRelative to the config file location."
+        },
+        "verdaccio.defaultConfig.maxBodySize": {
+          "type": "string",
+          "default": "10mb",
+          "markdownDescription": "Default max body size for package uploads.\n\n**Example:** `10mb`, `50mb`, `100mb`"
+        },
+        "verdaccio.mirror.packageManager": {
+          "type": "string",
+          "enum": ["auto", "npm", "yarn"],
+          "default": "auto",
+          "markdownDescription": "Package manager to use for dependency mirroring.\n\n`auto` detects from lockfile type."
+        },
+        "verdaccio.mirror.autoMirrorOnOnboarding": {
+          "type": "boolean",
+          "default": false,
+          "markdownDescription": "Automatically mirror all project dependencies during onboarding without prompting."
+        }
+      }
+    },
+    "menus": {
+      "view/title": [
+        {
+          "command": "verdaccio.start",
+          "when": "view == verdaccioStatus",
+          "group": "navigation@1"
+        },
+        {
+          "command": "verdaccio.stop",
+          "when": "view == verdaccioStatus",
+          "group": "navigation@2"
+        },
+        {
+          "command": "verdaccio.restart",
+          "when": "view == verdaccioStatus",
+          "group": "navigation@3"
+        },
+        {
+          "command": "verdaccio.showLogs",
+          "when": "view == verdaccioStatus",
+          "group": "1_actions@1"
+        },
+        {
+          "command": "verdaccio.openConfigPanel",
+          "when": "view == verdaccioStatus",
+          "group": "1_actions@2"
+        },
+        {
+          "command": "verdaccio.openRawConfig",
+          "when": "view == verdaccioStatus",
+          "group": "1_actions@3"
+        },
+        {
+          "command": "verdaccio.setRegistry",
+          "when": "view == verdaccioStatus",
+          "group": "2_registry@1"
+        },
+        {
+          "command": "verdaccio.resetRegistry",
+          "when": "view == verdaccioStatus",
+          "group": "2_registry@2"
+        },
+        {
+          "command": "verdaccio.enableOfflineMode",
+          "when": "view == verdaccioStatus",
+          "group": "3_mode@1"
+        },
+        {
+          "command": "verdaccio.disableOfflineMode",
+          "when": "view == verdaccioStatus",
+          "group": "3_mode@2"
+        },
+        {
+          "command": "verdaccio.openSettings",
+          "when": "view == verdaccioStatus",
+          "group": "navigation@9"
+        },
+        {
+          "command": "verdaccio.refreshCache",
+          "when": "view == verdaccioCache",
+          "group": "navigation@1"
+        },
+        {
+          "command": "verdaccio.addScopedRegistry",
+          "when": "view == verdaccioCache",
+          "group": "1_registries@1"
+        },
+        {
+          "command": "verdaccio.addAuthToken",
+          "when": "view == verdaccioCache",
+          "group": "1_registries@2"
+        },
+        {
+          "command": "verdaccio.mirrorDependencies",
+          "when": "view == verdaccioCache",
+          "group": "2_mirror@1"
+        },
+        {
+          "command": "verdaccio.openSettings",
+          "when": "view == verdaccioCache",
+          "group": "navigation@9"
+        },
+        {
+          "command": "verdaccio.refreshAnalytics",
+          "when": "view == verdaccioStorageAnalytics",
+          "group": "navigation@1"
+        },
+        {
+          "command": "verdaccio.bulkCleanup",
+          "when": "view == verdaccioStorageAnalytics",
+          "group": "navigation@2"
+        },
+        {
+          "command": "verdaccio.openSettings",
+          "when": "view == verdaccioStorageAnalytics",
+          "group": "navigation@9"
+        },
+        {
+          "command": "verdaccio.refreshHealth",
+          "when": "view == verdaccioRegistryHealth",
+          "group": "navigation@1"
+        },
+        {
+          "command": "verdaccio.enableOfflineMode",
+          "when": "view == verdaccioRegistryHealth",
+          "group": "1_mode@1"
+        },
+        {
+          "command": "verdaccio.disableOfflineMode",
+          "when": "view == verdaccioRegistryHealth",
+          "group": "1_mode@2"
+        },
+        {
+          "command": "verdaccio.openSettings",
+          "when": "view == verdaccioRegistryHealth",
+          "group": "navigation@9"
+        },
+        {
+          "command": "verdaccio.publishAllWorkspacePackages",
+          "when": "view == verdaccioWorkspacePackages",
+          "group": "navigation@1"
+        },
+        {
+          "command": "verdaccio.unpublishAllWorkspacePackages",
+          "when": "view == verdaccioWorkspacePackages",
+          "group": "1_actions@1"
+        },
+        {
+          "command": "verdaccio.bumpVersion",
+          "when": "view == verdaccioWorkspacePackages",
+          "group": "1_actions@2"
+        },
+        {
+          "command": "verdaccio.createProfile",
+          "when": "view == verdaccioWorkspacePackages",
+          "group": "2_profiles@1"
+        },
+        {
+          "command": "verdaccio.switchProfile",
+          "when": "view == verdaccioWorkspacePackages",
+          "group": "2_profiles@2"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "verdaccio.deletePackage",
+          "when": "view == verdaccioCache && viewItem == package",
+          "group": "inline"
+        },
+        {
+          "command": "verdaccio.pruneOldVersions",
+          "when": "view == verdaccioCache && viewItem == package",
+          "group": "1_manage@1"
+        },
+        {
+          "command": "verdaccio.deletePackage",
+          "when": "view == verdaccioCache && viewItem == package",
+          "group": "1_manage@2"
+        },
+        {
+          "command": "verdaccio.promotePackage",
+          "when": "view == verdaccioCache && viewItem == version",
+          "group": "1_publish@1"
+        },
+        {
+          "command": "verdaccio.publishToVerdaccio",
+          "when": "view == verdaccioWorkspacePackages",
+          "group": "1_publish@1"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "verdaccio.refreshCache",
+          "when": "false"
+        },
+        {
+          "command": "verdaccio.refreshAnalytics",
+          "when": "false"
+        },
+        {
+          "command": "verdaccio.refreshHealth",
+          "when": "false"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "yarn run build",
+    "build": "node esbuild.js --production",
+    "build:dev": "node esbuild.js",
+    "build:tsc": "tsc -p ./",
+    "watch": "node esbuild.js --watch",
+    "clean": "rm -rf out",
+    "rebuild": "yarn clean && yarn build",
+    "lint": "tsc --noEmit",
+    "test": "vitest --run",
+    "test:unit": "vitest --run --exclude='**/*.e2e.test.ts'",
+    "test:property": "vitest --run --include='**/*.property.test.ts'",
+    "test:e2e": "vitest --run --include='**/*.e2e.test.ts'",
+    "test:watch": "vitest",
+    "test:coverage": "vitest --run --coverage",
+    "test:all": "vitest --run",
+    "package": "vsce package --no-dependencies --yarn"
+  },
+  "dependencies": {
+    "@ai-capabilities-suite/mcp-client-base": "^1.0.2",
+    "@ai-capabilities-suite/vscode-shared-status-bar": "^1.0.21",
+    "js-yaml": "^4.1.0"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^25.5.2",
+    "@types/vscode": "^1.85.0",
+    "@vscode/vsce": "^3.7.1",
+    "esbuild": "^0.28.0",
+    "fast-check": "^3.15.0",
+    "typescript": "^5.3.0",
+    "vitest": "^1.6.0"
+  }
+}
