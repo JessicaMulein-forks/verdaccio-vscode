@@ -1,31 +1,43 @@
-const esbuild = require('esbuild');
+const esbuild = require("esbuild");
 
-const production = process.argv.includes('--production');
-const watch = process.argv.includes('--watch');
+const production = process.argv.includes("--production");
+const watch = process.argv.includes("--watch");
 
 async function main() {
-  const ctx = await esbuild.context({
-    entryPoints: ['src/extension.ts'],
+  // Build extension
+  const extensionCtx = await esbuild.context({
+    entryPoints: ["src/extension.ts"],
     bundle: true,
-    format: 'cjs',
+    format: "cjs",
     minify: production,
     sourcemap: !production,
     sourcesContent: false,
-    platform: 'node',
-    outfile: 'out/extension.js',
-    external: [
-      'vscode',
+    platform: "node",
+    outfile: "dist/extension.js",
+    external: ["vscode"],
+    logLevel: "info",
+    plugins: [
+      {
+        name: "watch-plugin",
+        setup(build) {
+          build.onEnd((result) => {
+            if (result.errors.length > 0) {
+              console.error("Extension build failed with errors");
+            } else {
+              console.log("Extension build succeeded");
+            }
+          });
+        },
+      },
     ],
-    logLevel: 'info',
-    target: 'es2020',
   });
 
   if (watch) {
-    await ctx.watch();
-    console.log('Watching for changes...');
+    await extensionCtx.watch();
+    console.log("Watching for changes...");
   } else {
-    await ctx.rebuild();
-    await ctx.dispose();
+    await extensionCtx.rebuild();
+    await extensionCtx.dispose();
   }
 }
 

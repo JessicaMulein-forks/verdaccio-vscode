@@ -1,3 +1,7 @@
-ai-capabilities-suite
-node_modules
-out
+node_modules/
+dist/
+*.vsix
+.vscode-test/
+coverage/
+.DS_Store
+*.log
