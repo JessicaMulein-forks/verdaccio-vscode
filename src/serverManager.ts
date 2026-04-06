@@ -15,6 +15,7 @@ export interface IServerManager extends vscode.Disposable {
 
 const OUTPUT_BUFFER_SIZE = 20;
 const GRACEFUL_SHUTDOWN_TIMEOUT_MS = 5000;
+const STARTUP_TIMEOUT_MS = 30000;
 
 export class ServerManager implements IServerManager {
   private _info: ServerInfo = {
@@ -27,6 +28,7 @@ export class ServerManager implements IServerManager {
 
   private _process: ChildProcess | undefined;
   private _outputBuffer: string[] = [];
+  private _startupTimer: NodeJS.Timeout | undefined;
   private readonly _stateEmitter = new vscode.EventEmitter<ServerState>();
   private readonly _configManager: IConfigManager;
 
@@ -69,6 +71,7 @@ export class ServerManager implements IServerManager {
     const configPath = this._configManager.getConfigPath();
     this._setState('starting');
     this._outputBuffer = [];
+    this._pendingOutput = '';
 
     return new Promise<void>((resolve, reject) => {
       try {
@@ -77,15 +80,19 @@ export class ServerManager implements IServerManager {
         this._info.pid = child.pid;
 
         child.stdout?.on('data', (data: Buffer) => {
-          this._bufferOutput(data.toString());
-          this._detectReady(data.toString());
+          const text = data.toString();
+          this._bufferOutput(text);
+          this._detectReady(text);
         });
 
         child.stderr?.on('data', (data: Buffer) => {
-          this._bufferOutput(data.toString());
+          const text = data.toString();
+          this._bufferOutput(text);
+          this._detectReady(text);
         });
 
         child.on('error', (err: Error) => {
+          this._clearStartupTimer();
           this._info.lastError = err.message;
           this._setState('error');
           vscode.window.showErrorMessage(
@@ -95,6 +102,7 @@ export class ServerManager implements IServerManager {
         });
 
         child.on('close', (code: number | null) => {
+          this._clearStartupTimer();
           const wasRunning = this._info.state === 'running' || this._info.state === 'starting';
           this._process = undefined;
           this._info.pid = undefined;
@@ -110,14 +118,28 @@ export class ServerManager implements IServerManager {
           }
         });
 
-        // Resolve after a short delay to allow error events to fire,
-        // or resolve immediately if we detect the server is ready via stdout
-        // The _detectReady method will transition to 'running' state
-        // For now, resolve once the process is spawned successfully
+        // Start a timeout so we don't stay in 'starting' forever
+        this._startupTimer = setTimeout(() => {
+          if (this._info.state === 'starting') {
+            // Process is alive but never printed the ready line —
+            // assume it is running on the default port
+            this._info.port = this._info.port ?? 4873;
+            this._info.startTime = new Date();
+            this._setState('running');
+            vscode.window.showWarningMessage(
+              'Verdaccio did not print its ready message in time. Assuming it is running on port ' +
+                this._info.port +
+                '.'
+            );
+          }
+        }, STARTUP_TIMEOUT_MS);
+
+        // Resolve once the process is spawned successfully
         if (child.pid) {
           resolve();
         }
       } catch (err: any) {
+        this._clearStartupTimer();
         this._info.lastError = err.message;
         this._setState('error');
         reject(err);
@@ -126,6 +148,7 @@ export class ServerManager implements IServerManager {
   }
 
   async stop(): Promise<void> {
+    this._clearStartupTimer();
     if (this._info.state === 'stopped') {
       return;
     }
@@ -174,11 +197,19 @@ export class ServerManager implements IServerManager {
   }
 
   dispose(): void {
+    this._clearStartupTimer();
     if (this._process) {
       this._process.kill('SIGKILL');
       this._process = undefined;
     }
     this._stateEmitter.dispose();
+  }
+
+  private _clearStartupTimer(): void {
+    if (this._startupTimer) {
+      clearTimeout(this._startupTimer);
+      this._startupTimer = undefined;
+    }
   }
 
   private _setState(newState: ServerState): void {
@@ -203,14 +234,43 @@ export class ServerManager implements IServerManager {
     }
   }
 
+  private _pendingOutput = '';
+
   private _detectReady(text: string): void {
-    // Verdaccio logs something like "http address - http://localhost:4873/"
-    // or "warn --- http address - http://0.0.0.0:4873/ - verdaccio/x.x.x"
-    const match = text.match(/http[s]?:\/\/[^:]+:(\d+)/);
-    if (match && this._info.state === 'starting') {
-      this._info.port = parseInt(match[1], 10);
+    if (this._info.state !== 'starting') {
+      return;
+    }
+
+    // Accumulate text in case the ready message is split across data events
+    this._pendingOutput += text;
+
+    // Verdaccio pretty format: "warn --- http address - http://0.0.0.0:4873/ - verdaccio/x.x.x"
+    // Verdaccio JSON format:   {"level":30,"msg":"http address - http://0.0.0.0:4873/", ...}
+    // Also match "listening on" or just a bare URL with port
+    const urlMatch = this._pendingOutput.match(/http[s]?:\/\/[^:"\s]+:(\d+)/);
+    if (urlMatch) {
+      this._clearStartupTimer();
+      this._info.port = parseInt(urlMatch[1], 10);
       this._info.startTime = new Date();
       this._setState('running');
+      this._pendingOutput = '';
+      return;
+    }
+
+    // Also detect "address" or "listening" keywords paired with a port number
+    const portOnlyMatch = this._pendingOutput.match(/(?:address|listen(?:ing)?)[^]*?(?::|\bport\b\s*)(\d{4,5})/i);
+    if (portOnlyMatch) {
+      this._clearStartupTimer();
+      this._info.port = parseInt(portOnlyMatch[1], 10);
+      this._info.startTime = new Date();
+      this._setState('running');
+      this._pendingOutput = '';
+      return;
+    }
+
+    // Prevent unbounded accumulation — keep only the last 4KB
+    if (this._pendingOutput.length > 4096) {
+      this._pendingOutput = this._pendingOutput.slice(-2048);
     }
   }
 }
