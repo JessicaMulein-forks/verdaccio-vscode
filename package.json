@@ -669,7 +669,8 @@
     "test:watch": "vitest",
     "test:coverage": "vitest --run --coverage",
     "test:all": "vitest --run",
-    "package": "vsce package --no-dependencies --yarn"
+    "package": "npx vsce package --no-dependencies --yarn",
+    "publish": "npx vsce publish --no-dependencies --yarn"
   },
   "dependencies": {
     "@ai-capabilities-suite/mcp-client-base": "^1.0.2",
