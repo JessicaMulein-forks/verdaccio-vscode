@@ -81,20 +81,29 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   profileStatusBarItem.command = 'verdaccio.switchProfile';
   profileManager.setStatusBarItem(profileStatusBarItem);
 
+  logManager.log('Extension activated');
+
   // --- Register all commands ---
   const startCmd = vscode.commands.registerCommand('verdaccio.start', async () => {
     try {
       const exists = await configManager.configExists();
       if (!exists) {
+        logManager.log('No config found, prompting to generate...');
         const action = await vscode.window.showWarningMessage(
           'Verdaccio configuration not found. Generate a default config first?',
           'Generate', 'Cancel',
         );
-        if (action === 'Generate') { await configManager.generateDefaultConfig(); } else { return; }
+        if (action === 'Generate') {
+          await configManager.generateDefaultConfig();
+          logManager.log('Default config generated');
+        } else { return; }
       }
+      logManager.log('Starting Verdaccio server...');
       await sm.start();
+      logManager.log(`Server running on port ${sm.port}`);
     } catch (err: any) {
       if (err.code === 'ENOENT' || (err.message && err.message.includes('ENOENT'))) {
+        logManager.log('Verdaccio binary not found (not installed)');
         const action = await vscode.window.showErrorMessage(
           'Verdaccio is not installed. Would you like to install it globally?',
           'Install (npm)', 'Cancel',
@@ -103,16 +112,18 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
           const terminal = vscode.window.createTerminal('Verdaccio Install');
           terminal.show();
           terminal.sendText('npm install -g verdaccio');
+          logManager.log('Installing verdaccio globally via npm...');
           vscode.window.showInformationMessage('Installing Verdaccio... Run "Verdaccio: Start" again after installation completes.');
         }
       } else {
+        logManager.log(`Failed to start: ${err.message}`);
         vscode.window.showErrorMessage(`Failed to start Verdaccio: ${err.message}`);
       }
     }
   });
-  const stopCmd = vscode.commands.registerCommand('verdaccio.stop', () => sm.stop());
+  const stopCmd = vscode.commands.registerCommand('verdaccio.stop', () => { logManager.log('Stopping server...'); return sm.stop(); });
   const restartCmd = vscode.commands.registerCommand('verdaccio.restart', async () => {
-    try { await sm.restart(); } catch (err: any) { vscode.window.showErrorMessage(`Failed to restart Verdaccio: ${err.message}`); }
+    try { logManager.log('Restarting server...'); await sm.restart(); } catch (err: any) { vscode.window.showErrorMessage(`Failed to restart Verdaccio: ${err.message}`); }
   });
   const showLogsCmd = vscode.commands.registerCommand('verdaccio.showLogs', () => logManager.show());
   const openRawConfigCmd = vscode.commands.registerCommand('verdaccio.openRawConfig', async () => {
@@ -271,6 +282,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
   // --- Subscribe to server state changes ---
   const stateChangeDisposable = sm.onDidChangeState((state: ServerState) => {
+    logManager.log(`Server state: ${state}${state === 'running' ? ` (port ${sm.port})` : ''}`);
     updateStatusBar(statusBarItem, state, sm.port);
     if ((state === 'starting' || state === 'running') && (sm as any)._process) {
       logManager.attach((sm as any)._process);

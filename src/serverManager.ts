@@ -113,9 +113,6 @@ export class ServerManager implements IServerManager {
           readyListener.dispose();
           this._info.lastError = err.message;
           this._setState('error');
-          vscode.window.showErrorMessage(
-            `Verdaccio failed to start: ${err.message}`
-          );
           settle(() => reject(err));
         });
 

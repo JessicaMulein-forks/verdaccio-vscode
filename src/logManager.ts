@@ -4,6 +4,8 @@ import { ChildProcess } from 'child_process';
 export interface ILogManager extends vscode.Disposable {
   attach(process: ChildProcess): void;
   show(): void;
+  /** Write a message directly to the output channel (not from a process). */
+  log(message: string): void;
 }
 
 const LOG_LEVELS = ['trace', 'debug', 'info', 'warn', 'error', 'fatal'] as const;
@@ -100,6 +102,10 @@ export class LogManager implements ILogManager {
 
   show(): void {
     this._outputChannel.show();
+  }
+
+  log(message: string): void {
+    this._outputChannel.appendLine(`[Verdaccio] ${message}`);
   }
 
   getOutputChannel(): vscode.OutputChannel {
