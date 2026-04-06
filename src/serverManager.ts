@@ -137,13 +137,19 @@ export class ServerManager implements IServerManager {
 
         // Start a timeout so we don't stay in 'starting' forever
         this._startupTimer = setTimeout(() => {
-          if (this._info.state === 'starting') {
-            // Process is alive but never printed the ready line —
-            // read port from config listen field, fall back to 4873
-            this._info.port = this._info.port ?? this._parsePortFromConfig();
+          try {
+            if (this._info.state === 'starting') {
+              this._info.port = this._info.port ?? this._parsePortFromConfig();
+              this._info.startTime = new Date();
+              this._setState('running');
+              readyListener.dispose();
+              settle(() => resolve());
+            }
+          } catch {
+            // If anything fails in the timeout, still resolve so we don't hang
+            this._info.port = this._info.port ?? 4873;
             this._info.startTime = new Date();
-            this._setState('running');
-            // Resolve directly in case the event listener doesn't fire synchronously
+            this._info.state = 'running';
             readyListener.dispose();
             settle(() => resolve());
           }
@@ -230,7 +236,11 @@ export class ServerManager implements IServerManager {
 
   private _setState(newState: ServerState): void {
     this._info.state = newState;
-    this._stateEmitter.fire(newState);
+    try {
+      this._stateEmitter.fire(newState);
+    } catch {
+      // Never let listener errors propagate — they'd break the state machine
+    }
   }
 
   private _resetInfo(): void {
@@ -277,36 +287,28 @@ export class ServerManager implements IServerManager {
       return;
     }
 
-    // Accumulate text in case the ready message is split across data events
-    this._pendingOutput += text;
+    try {
+      // Accumulate text in case the ready message is split across data events
+      this._pendingOutput += text;
 
-    // Verdaccio pretty format: "warn --- http address - http://0.0.0.0:4873/ - verdaccio/x.x.x"
-    // Verdaccio JSON format:   {"level":30,"msg":"http address - http://0.0.0.0:4873/", ...}
-    // Also match "listening on" or just a bare URL with port
-    const urlMatch = this._pendingOutput.match(/http[s]?:\/\/[^:"\s]+:(\d+)/);
-    if (urlMatch) {
-      this._clearStartupTimer();
-      this._info.port = parseInt(urlMatch[1], 10);
-      this._info.startTime = new Date();
-      this._setState('running');
-      this._pendingOutput = '';
-      return;
-    }
+      // Verdaccio pretty format: "warn --- http address - http://0.0.0.0:4873/ - verdaccio/x.x.x"
+      // Verdaccio JSON format:   {"level":30,"msg":"http address - http://0.0.0.0:4873/", ...}
+      const urlMatch = this._pendingOutput.match(/https?:\/\/[^:"\s]+:(\d+)/);
+      if (urlMatch) {
+        this._clearStartupTimer();
+        this._info.port = parseInt(urlMatch[1], 10);
+        this._info.startTime = new Date();
+        this._setState('running');
+        this._pendingOutput = '';
+        return;
+      }
 
-    // Also detect "address" or "listening" keywords paired with a port number
-    const portOnlyMatch = this._pendingOutput.match(/(?:address|listen(?:ing)?)[^]*?(?::|\bport\b\s*)(\d{4,5})/i);
-    if (portOnlyMatch) {
-      this._clearStartupTimer();
-      this._info.port = parseInt(portOnlyMatch[1], 10);
-      this._info.startTime = new Date();
-      this._setState('running');
-      this._pendingOutput = '';
-      return;
-    }
-
-    // Prevent unbounded accumulation — keep only the last 4KB
-    if (this._pendingOutput.length > 4096) {
-      this._pendingOutput = this._pendingOutput.slice(-2048);
+      // Prevent unbounded accumulation — keep only the last 4KB
+      if (this._pendingOutput.length > 4096) {
+        this._pendingOutput = this._pendingOutput.slice(-2048);
+      }
+    } catch {
+      // Never let regex or parsing errors prevent the timeout fallback
     }
   }
 }
