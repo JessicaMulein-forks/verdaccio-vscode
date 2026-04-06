@@ -62,11 +62,14 @@ export class OnboardingManager implements IOnboardingManager {
   }
 
   async runOnboarding(): Promise<void> {
-    // Start server
+    // Start server — resolves once the server is confirmed running and port is known
     await this._serverManager.start();
 
-    // Set registry
-    const port = this._serverManager.port ?? 4873;
+    const port = this._serverManager.port;
+    if (!port) {
+      vscode.window.showErrorMessage('Verdaccio server started but port could not be determined.');
+      return;
+    }
     await this._npmrcManager.setRegistry(`http://localhost:${port}`);
 
     // Offer to mirror dependencies

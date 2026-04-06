@@ -5,22 +5,29 @@ import { EventEmitter } from 'events';
 const {
   mockShowWarningMessage,
   mockShowErrorMessage,
-  mockStateEmitterFire,
-  mockStateEmitterDispose,
   mockSpawn,
 } = vi.hoisted(() => ({
   mockShowWarningMessage: vi.fn(),
   mockShowErrorMessage: vi.fn(),
-  mockStateEmitterFire: vi.fn(),
-  mockStateEmitterDispose: vi.fn(),
   mockSpawn: vi.fn(),
 }));
 
 vi.mock('vscode', () => {
+  // Functional EventEmitter that supports fire/event/dispose
   class MockVscodeEventEmitter {
-    fire = mockStateEmitterFire;
-    dispose = mockStateEmitterDispose;
-    event = vi.fn();
+    private _listeners: Array<(e: any) => void> = [];
+    fire = (e: any) => {
+      for (const listener of this._listeners) {
+        listener(e);
+      }
+    };
+    dispose = () => {
+      this._listeners = [];
+    };
+    event = (listener: (e: any) => void) => {
+      this._listeners.push(listener);
+      return { dispose: () => { this._listeners = this._listeners.filter((l) => l !== listener); } };
+    };
   }
   return {
     EventEmitter: MockVscodeEventEmitter,
@@ -68,6 +75,17 @@ function createMockConfigManager(): IConfigManager {
   } as unknown as IConfigManager;
 }
 
+/**
+ * Helper: starts the server and emits the ready line so start() resolves.
+ * Returns the start promise.
+ */
+async function startAndReady(sm: ServerManager, child: ReturnType<typeof createMockChildProcess>, readyLine = 'warn --- http address - http://0.0.0.0:4873/ - verdaccio/5.0.0') {
+  // Emit the ready line on next microtask so start() can set up listeners first
+  const startPromise = sm.start();
+  child.stdout.emit('data', Buffer.from(readyLine));
+  await startPromise;
+}
+
 describe('ServerManager', () => {
   let serverManager: ServerManager;
   let configManager: IConfigManager;
@@ -91,33 +109,22 @@ describe('ServerManager', () => {
    * State transitions: stopped → starting → running → stopped
    */
   describe('state transitions', () => {
-    it('transitions from stopped → starting on start()', async () => {
+    it('transitions to running when ready output is detected and start() resolves', async () => {
       expect(serverManager.state).toBe('stopped');
 
-      await serverManager.start();
+      await startAndReady(serverManager, mockChild);
 
-      expect(serverManager.state).toBe('starting');
+      expect(serverManager.state).toBe('running');
+      expect(serverManager.port).toBe(4873);
+      expect(serverManager.startTime).toBeInstanceOf(Date);
       expect(mockSpawn).toHaveBeenCalledWith('verdaccio', [
         '--config',
         '/mock/workspace/.verdaccio/config.yaml',
       ]);
     });
 
-    it('transitions from starting → running when ready output is detected', async () => {
-      await serverManager.start();
-      expect(serverManager.state).toBe('starting');
-
-      // Simulate Verdaccio printing its ready message
-      mockChild.stdout.emit('data', Buffer.from('warn --- http address - http://0.0.0.0:4873/ - verdaccio/5.0.0'));
-
-      expect(serverManager.state).toBe('running');
-      expect(serverManager.port).toBe(4873);
-      expect(serverManager.startTime).toBeInstanceOf(Date);
-    });
-
     it('transitions from running → stopped on stop()', async () => {
-      await serverManager.start();
-      mockChild.stdout.emit('data', Buffer.from('http address - http://localhost:4873/'));
+      await startAndReady(serverManager, mockChild);
       expect(serverManager.state).toBe('running');
 
       const stopPromise = serverManager.stop();
@@ -130,20 +137,28 @@ describe('ServerManager', () => {
       expect(mockChild.kill).toHaveBeenCalledWith('SIGTERM');
     });
 
-    it('fires onDidChangeState for each transition', async () => {
-      await serverManager.start();
-      // 'starting' state fired
-      expect(mockStateEmitterFire).toHaveBeenCalledWith('starting');
+    it('start() resolves only after state becomes running', async () => {
+      const startPromise = serverManager.start();
 
+      // State should be 'starting' before ready line
+      expect(serverManager.state).toBe('starting');
+
+      // Emit ready line
       mockChild.stdout.emit('data', Buffer.from('http address - http://localhost:4873/'));
-      // 'running' state fired
-      expect(mockStateEmitterFire).toHaveBeenCalledWith('running');
 
-      const stopPromise = serverManager.stop();
-      mockChild.emit('close', 0);
-      await stopPromise;
-      // 'stopped' state fired
-      expect(mockStateEmitterFire).toHaveBeenCalledWith('stopped');
+      await startPromise;
+      expect(serverManager.state).toBe('running');
+    });
+
+    it('start() rejects if process exits before becoming ready', async () => {
+      const startPromise = serverManager.start();
+      expect(serverManager.state).toBe('starting');
+
+      // Process exits unexpectedly before ready
+      mockChild.emit('close', 1);
+
+      await expect(startPromise).rejects.toThrow('Process exited with code 1');
+      expect(serverManager.state).toBe('error');
     });
   });
 
@@ -153,8 +168,7 @@ describe('ServerManager', () => {
    */
   describe('duplicate start guard', () => {
     it('shows warning when start() is called while running', async () => {
-      await serverManager.start();
-      mockChild.stdout.emit('data', Buffer.from('http address - http://localhost:4873/'));
+      await startAndReady(serverManager, mockChild);
       expect(serverManager.state).toBe('running');
 
       await serverManager.start();
@@ -165,7 +179,8 @@ describe('ServerManager', () => {
     });
 
     it('shows warning when start() is called while starting', async () => {
-      await serverManager.start();
+      // Don't await — leave in starting state
+      const startPromise = serverManager.start();
       expect(serverManager.state).toBe('starting');
 
       await serverManager.start();
@@ -173,6 +188,10 @@ describe('ServerManager', () => {
       expect(mockShowWarningMessage).toHaveBeenCalledWith(
         'Verdaccio server is already running.'
       );
+
+      // Clean up: emit ready so the first start resolves
+      mockChild.stdout.emit('data', Buffer.from('http address - http://localhost:4873/'));
+      await startPromise;
     });
   });
 
@@ -182,8 +201,7 @@ describe('ServerManager', () => {
    */
   describe('unexpected exit', () => {
     it('shows error with exit code and last output on unexpected close', async () => {
-      await serverManager.start();
-      mockChild.stdout.emit('data', Buffer.from('http address - http://localhost:4873/'));
+      await startAndReady(serverManager, mockChild);
       expect(serverManager.state).toBe('running');
 
       // Feed some output lines
@@ -201,9 +219,9 @@ describe('ServerManager', () => {
     });
 
     it('buffers at most 20 lines of output', async () => {
-      await serverManager.start();
+      const startPromise = serverManager.start();
 
-      // Feed 25 lines
+      // Feed 25 lines (before ready, so state is still 'starting')
       for (let i = 1; i <= 25; i++) {
         mockChild.stdout.emit('data', Buffer.from(`line-${i}\n`));
       }
@@ -212,6 +230,10 @@ describe('ServerManager', () => {
       expect(serverManager.outputBuffer.length).toBeLessThanOrEqual(20);
       // First lines should have been evicted
       expect(serverManager.outputBuffer).not.toContain('line-1');
+
+      // Clean up: emit ready so start resolves
+      mockChild.stdout.emit('data', Buffer.from('http address - http://localhost:4873/'));
+      await startPromise;
     });
   });
 
@@ -229,8 +251,9 @@ describe('ServerManager', () => {
     });
 
     it('sends SIGTERM first, then SIGKILL after 5 seconds if process does not exit', async () => {
-      await serverManager.start();
+      const startPromise = serverManager.start();
       mockChild.stdout.emit('data', Buffer.from('http address - http://localhost:4873/'));
+      await startPromise;
       expect(serverManager.state).toBe('running');
 
       const stopPromise = serverManager.stop();
@@ -253,8 +276,9 @@ describe('ServerManager', () => {
     });
 
     it('does not send SIGKILL if process exits before timeout', async () => {
-      await serverManager.start();
+      const startPromise = serverManager.start();
       mockChild.stdout.emit('data', Buffer.from('http address - http://localhost:4873/'));
+      await startPromise;
 
       const stopPromise = serverManager.stop();
 
@@ -268,6 +292,21 @@ describe('ServerManager', () => {
       vi.advanceTimersByTime(6000);
       expect(mockChild.kill).not.toHaveBeenCalledWith('SIGKILL');
     });
+
+    it('resolves start() via timeout fallback when ready line is never detected', async () => {
+      const startPromise = serverManager.start();
+      expect(serverManager.state).toBe('starting');
+
+      // Advance past the startup timeout (30s)
+      vi.advanceTimersByTime(30000);
+
+      await startPromise;
+      expect(serverManager.state).toBe('running');
+      expect(serverManager.port).toBe(4873); // default fallback
+      expect(mockShowWarningMessage).toHaveBeenCalledWith(
+        expect.stringContaining('did not print its ready message')
+      );
+    });
   });
 
   /**
@@ -276,35 +315,62 @@ describe('ServerManager', () => {
    */
   describe('restart', () => {
     it('stops the running server then starts a new one', async () => {
-      await serverManager.start();
-      mockChild.stdout.emit('data', Buffer.from('http address - http://localhost:4873/'));
+      await startAndReady(serverManager, mockChild);
       expect(serverManager.state).toBe('running');
 
       // Prepare a fresh mock child for the second start
       const secondChild = createMockChildProcess(99999);
       mockSpawn.mockReturnValue(secondChild);
 
+      // Start restart — it will call stop() then start()
       const restartPromise = serverManager.restart();
 
-      // The first process should receive SIGTERM from stop()
-      expect(mockChild.kill).toHaveBeenCalledWith('SIGTERM');
-
-      // Simulate first process exiting
+      // Simulate first process exiting so stop() resolves
       mockChild.emit('close', 0);
+
+      // After stop resolves, start() will be called with secondChild.
+      // We need to wait a tick for start() to set up listeners, then emit ready.
+      // Use queueMicrotask to ensure start() has attached its listeners.
+      await new Promise<void>((resolve) => {
+        const check = () => {
+          if (serverManager.state === 'starting') {
+            secondChild.stdout.emit('data', Buffer.from('http address - http://localhost:4873/'));
+            resolve();
+          } else {
+            setTimeout(check, 1);
+          }
+        };
+        check();
+      });
+
       await restartPromise;
 
-      // After restart, a new process should have been spawned
       expect(mockSpawn).toHaveBeenCalledTimes(2);
-      expect(serverManager.state).toBe('starting');
+      expect(serverManager.state).toBe('running');
     });
 
     it('restart from stopped state just starts', async () => {
       expect(serverManager.state).toBe('stopped');
 
-      await serverManager.restart();
+      const restartPromise = serverManager.restart();
+
+      // Wait for state to become 'starting' then emit ready
+      await new Promise<void>((resolve) => {
+        const check = () => {
+          if (serverManager.state === 'starting') {
+            mockChild.stdout.emit('data', Buffer.from('http address - http://localhost:4873/'));
+            resolve();
+          } else {
+            setTimeout(check, 1);
+          }
+        };
+        check();
+      });
+
+      await restartPromise;
 
       expect(mockSpawn).toHaveBeenCalledTimes(1);
-      expect(serverManager.state).toBe('starting');
+      expect(serverManager.state).toBe('running');
     });
   });
 
@@ -314,8 +380,27 @@ describe('ServerManager', () => {
    */
   describe('process info tracking', () => {
     it('tracks pid from the spawned process', async () => {
-      await serverManager.start();
+      const startPromise = serverManager.start();
+      // pid is set immediately on spawn, even before ready
       expect(serverManager.pid).toBe(12345);
+
+      // Clean up
+      mockChild.stdout.emit('data', Buffer.from('http address - http://localhost:4873/'));
+      await startPromise;
+    });
+  });
+
+  /**
+   * Validates: Promise contract — start() settles exactly once
+   */
+  describe('promise contract', () => {
+    it('start() rejects on spawn error and does not resolve', async () => {
+      const startPromise = serverManager.start();
+
+      mockChild.emit('error', new Error('ENOENT'));
+
+      await expect(startPromise).rejects.toThrow('ENOENT');
+      expect(serverManager.state).toBe('error');
     });
   });
 });

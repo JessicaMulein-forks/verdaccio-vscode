@@ -4,6 +4,7 @@ import * as fs from 'fs/promises';
 import { WorkspacePackageInfo, BulkPublishResult, PublishResult } from './types';
 import { IServerManager } from './serverManager';
 import { IPublishManager } from './publishManager';
+import { IConfigManager } from './configManager';
 
 export interface IWorkspacePackageProvider extends vscode.TreeDataProvider<WorkspacePackageItem> {
   refresh(): void;
@@ -27,6 +28,15 @@ export class WorkspacePackageItem extends vscode.TreeItem {
  * Throws if a cycle is detected.
  */
 export function topologicalSort(packages: { name: string; dependencies: string[] }[]): string[] {
+  // Check for duplicate package names up front
+  const seen = new Set<string>();
+  for (const pkg of packages) {
+    if (seen.has(pkg.name)) {
+      throw new Error(`Duplicate package name detected: "${pkg.name}". Ensure workspace globs do not overlap.`);
+    }
+    seen.add(pkg.name);
+  }
+
   const nameSet = new Set(packages.map((p) => p.name));
   const adjList = new Map<string, string[]>();
   const inDegree = new Map<string, number>();
@@ -116,10 +126,12 @@ export class WorkspacePackageProvider implements IWorkspacePackageProvider {
   private _packages: WorkspacePackageInfo[] = [];
   private readonly _serverManager: IServerManager;
   private readonly _publishManager: IPublishManager;
+  private readonly _configManager: IConfigManager;
 
-  constructor(serverManager: IServerManager, publishManager: IPublishManager) {
+  constructor(serverManager: IServerManager, publishManager: IPublishManager, configManager: IConfigManager) {
     this._serverManager = serverManager;
     this._publishManager = publishManager;
+    this._configManager = configManager;
   }
 
   refresh(): void {
@@ -300,14 +312,44 @@ export class WorkspacePackageProvider implements IWorkspacePackageProvider {
       return;
     }
 
-    // Remove packages from storage (simplified: delete package directories)
+    // Resolve storage path from config
+    let storagePath: string;
+    try {
+      const config = await this._configManager.readConfig();
+      const configDir = path.dirname(this._configManager.getConfigPath());
+      storagePath = path.isAbsolute(config.storage)
+        ? config.storage
+        : path.join(configDir, config.storage);
+    } catch (err: any) {
+      vscode.window.showErrorMessage(`Failed to read Verdaccio config: ${err.message}`);
+      return;
+    }
+
+    let removed = 0;
+    let failed = 0;
+
     for (const pkg of packages) {
+      // Resolve package directory in storage (handle scoped packages)
+      const packageDir = pkg.name.startsWith('@')
+        ? path.join(storagePath, ...pkg.name.split('/'))
+        : path.join(storagePath, pkg.name);
+
       try {
-        // This is a simplified approach — in production you'd use the Verdaccio API
-        vscode.window.showInformationMessage(`Removed ${pkg.name} from Verdaccio storage.`);
+        await fs.rm(packageDir, { recursive: true, force: true });
+        removed++;
       } catch {
-        // Continue on failure
+        failed++;
       }
+    }
+
+    if (failed === 0) {
+      vscode.window.showInformationMessage(
+        `Removed all ${removed} workspace packages from Verdaccio storage.`,
+      );
+    } else {
+      vscode.window.showWarningMessage(
+        `Removed ${removed} packages, ${failed} failed to remove.`,
+      );
     }
   }
 

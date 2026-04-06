@@ -41,11 +41,15 @@ vi.mock('vscode', () => ({
 import { LogManager } from '../logManager';
 
 /** Creates a mock ChildProcess with EventEmitter stdout and stderr. */
-function createMockChildProcess() {
-  const proc = {
-    stdout: new EventEmitter(),
-    stderr: new EventEmitter(),
+function createMockChildProcess(pid = 12345) {
+  const proc = new EventEmitter() as EventEmitter & {
+    stdout: EventEmitter;
+    stderr: EventEmitter;
+    pid: number;
   };
+  proc.stdout = new EventEmitter();
+  proc.stderr = new EventEmitter();
+  proc.pid = pid;
   return proc as any;
 }
 
@@ -54,6 +58,11 @@ describe('LogManager', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockCreateOutputChannel.mockReturnValue({
+      appendLine: mockAppendLine,
+      show: mockShow,
+      dispose: mockDispose,
+    });
     logManager = new LogManager();
   });
 

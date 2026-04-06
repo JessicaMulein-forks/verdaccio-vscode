@@ -8,6 +8,7 @@ export interface IServerManager extends vscode.Disposable {
   readonly onDidChangeState: vscode.Event<ServerState>;
   readonly port: number | undefined;
   readonly startTime: Date | undefined;
+  /** Starts the server. Resolves when the server is confirmed running (port detected) or rejects on failure. */
   start(): Promise<void>;
   stop(): Promise<void>;
   restart(): Promise<void>;
@@ -74,10 +75,26 @@ export class ServerManager implements IServerManager {
     this._pendingOutput = '';
 
     return new Promise<void>((resolve, reject) => {
+      let settled = false;
+
+      const settle = (fn: () => void) => {
+        if (settled) { return; }
+        settled = true;
+        fn();
+      };
+
       try {
         const child = spawn('verdaccio', ['--config', configPath]);
         this._process = child;
         this._info.pid = child.pid;
+
+        // Listen for the ready transition to resolve the promise
+        const readyListener = this.onDidChangeState((state) => {
+          if (state === 'running') {
+            readyListener.dispose();
+            settle(() => resolve());
+          }
+        });
 
         child.stdout?.on('data', (data: Buffer) => {
           const text = data.toString();
@@ -93,16 +110,18 @@ export class ServerManager implements IServerManager {
 
         child.on('error', (err: Error) => {
           this._clearStartupTimer();
+          readyListener.dispose();
           this._info.lastError = err.message;
           this._setState('error');
           vscode.window.showErrorMessage(
             `Verdaccio failed to start: ${err.message}`
           );
-          reject(err);
+          settle(() => reject(err));
         });
 
         child.on('close', (code: number | null) => {
           this._clearStartupTimer();
+          readyListener.dispose();
           const wasRunning = this._info.state === 'running' || this._info.state === 'starting';
           this._process = undefined;
           this._info.pid = undefined;
@@ -115,6 +134,7 @@ export class ServerManager implements IServerManager {
             vscode.window.showErrorMessage(
               `Verdaccio exited unexpectedly (code ${code}).\n\nLast output:\n${lastLines}`
             );
+            settle(() => reject(new Error(`Process exited with code ${code}`)));
           }
         });
 
@@ -131,18 +151,20 @@ export class ServerManager implements IServerManager {
                 this._info.port +
                 '.'
             );
+            // Note: resolve happens via the readyListener above when state becomes 'running'
           }
         }, STARTUP_TIMEOUT_MS);
 
-        // Resolve once the process is spawned successfully
-        if (child.pid) {
-          resolve();
+        // If spawn itself failed synchronously (no pid), reject
+        if (!child.pid) {
+          readyListener.dispose();
+          settle(() => reject(new Error('Failed to spawn verdaccio process')));
         }
       } catch (err: any) {
         this._clearStartupTimer();
         this._info.lastError = err.message;
         this._setState('error');
-        reject(err);
+        settle(() => reject(err));
       }
     });
   }

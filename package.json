@@ -2,7 +2,7 @@
   "name": "vscode-mcp-acs-verdaccio",
   "displayName": "MCP ACS Verdaccio",
   "description": "Manage a local Verdaccio npm registry from VS Code with full AI agent integration through MCP. Part of the Digital Defiance AI Capabilities Suite.",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "packageManager": "yarn@4.12.0",
   "publisher": "DigitalDefiance",
   "homepage": "https://github.com/Digital-Defiance/vscode-mcp-acs-verdaccio",

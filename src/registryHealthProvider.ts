@@ -60,6 +60,7 @@ export class RegistryHealthProvider implements IRegistryHealthProvider {
   private readonly _configManager: IConfigManager;
   private _healthStatuses: Map<string, UplinkHealthStatus> = new Map();
   private _monitoringInterval: ReturnType<typeof setInterval> | undefined;
+  private _pingInFlight = false;
   private readonly _onDidChangeTreeData = new vscode.EventEmitter<HealthItem | undefined>();
   readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
 
@@ -77,12 +78,19 @@ export class RegistryHealthProvider implements IRegistryHealthProvider {
 
     const intervalMs = 30000; // default 30s
     this._monitoringInterval = setInterval(async () => {
-      await this._pingUplinks();
-      this.refresh();
+      if (this._pingInFlight) { return; } // skip if previous ping is still running
+      this._pingInFlight = true;
+      try {
+        await this._pingUplinks();
+        this.refresh();
+      } finally {
+        this._pingInFlight = false;
+      }
     }, intervalMs);
 
     // Initial ping
-    this._pingUplinks().then(() => this.refresh());
+    this._pingInFlight = true;
+    this._pingUplinks().then(() => this.refresh()).finally(() => { this._pingInFlight = false; });
   }
 
   stopMonitoring(): void {
@@ -204,10 +212,14 @@ export class RegistryHealthProvider implements IRegistryHealthProvider {
       const allUnreachable = this._healthStatuses.size > 0 &&
         [...this._healthStatuses.values()].every((s) => s.state === 'unreachable');
       if (allUnreachable) {
-        vscode.window.showWarningMessage(
+        const action = await vscode.window.showWarningMessage(
           'All registry uplinks are unreachable. Consider enabling offline mode.',
           'Enable Offline Mode',
         );
+        if (action === 'Enable Offline Mode') {
+          await this._configManager.enableOfflineMode();
+          vscode.window.showInformationMessage('Offline mode enabled.');
+        }
       }
     } catch {
       // Config read failed — skip this ping cycle

@@ -328,11 +328,24 @@ export class CacheViewProvider implements ICacheViewProvider {
   }
 
   private _setupWatcher(): void {
+    this._resolveAndWatch().catch(() => {
+      // Fall back to default pattern if config can't be read yet
+      this._watchPath('storage');
+    });
+  }
+
+  private async _resolveAndWatch(): Promise<void> {
+    const config = await this._configManager.readConfig();
+    const configDir = path.dirname(this._configManager.getConfigPath());
+    const storagePath = path.isAbsolute(config.storage)
+      ? config.storage
+      : path.resolve(configDir, config.storage);
+    this._watchPath(storagePath);
+  }
+
+  private _watchPath(storagePath: string): void {
     try {
-      const configPath = this._configManager.getConfigPath();
-      const configDir = path.dirname(configPath);
-      // Watch the storage directory relative to config
-      const storagePattern = new vscode.RelativePattern(configDir, 'storage/**');
+      const storagePattern = new vscode.RelativePattern(storagePath, '**');
       this._watcher = vscode.workspace.createFileSystemWatcher(storagePattern);
 
       const debouncedRefresh = () => {
@@ -347,7 +360,7 @@ export class CacheViewProvider implements ICacheViewProvider {
       this._watcher.onDidCreate(debouncedRefresh);
       this._watcher.onDidDelete(debouncedRefresh);
     } catch {
-      // Config path may not be available yet
+      // Storage path may not be available yet
     }
   }
 

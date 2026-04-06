@@ -40,7 +40,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   // Instantiate new providers (Req 11, 12, 13)
   const storageAnalyticsProvider = new StorageAnalyticsProvider(configManager);
   const publishManager = new PublishManager(sm, configManager);
-  const workspacePackageProvider = new WorkspacePackageProvider(sm, publishManager);
+  const workspacePackageProvider = new WorkspacePackageProvider(sm, publishManager, configManager);
 
   // --- Instantiate new managers for Req 15-19 ---
   const mcpServer = new McpServer({
