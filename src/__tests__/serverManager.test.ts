@@ -297,15 +297,12 @@ describe('ServerManager', () => {
       const startPromise = serverManager.start();
       expect(serverManager.state).toBe('starting');
 
-      // Advance past the startup timeout (30s)
-      vi.advanceTimersByTime(30000);
+      // Advance past the startup timeout (5s)
+      vi.advanceTimersByTime(5000);
 
       await startPromise;
       expect(serverManager.state).toBe('running');
       expect(serverManager.port).toBe(4873); // default fallback
-      expect(mockShowWarningMessage).toHaveBeenCalledWith(
-        expect.stringContaining('did not print its ready message')
-      );
     });
   });
 

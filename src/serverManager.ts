@@ -16,7 +16,7 @@ export interface IServerManager extends vscode.Disposable {
 
 const OUTPUT_BUFFER_SIZE = 20;
 const GRACEFUL_SHUTDOWN_TIMEOUT_MS = 5000;
-const STARTUP_TIMEOUT_MS = 30000;
+const STARTUP_TIMEOUT_MS = 5000;
 
 export class ServerManager implements IServerManager {
   private _info: ServerInfo = {
@@ -139,16 +139,13 @@ export class ServerManager implements IServerManager {
         this._startupTimer = setTimeout(() => {
           if (this._info.state === 'starting') {
             // Process is alive but never printed the ready line —
-            // assume it is running on the default port
-            this._info.port = this._info.port ?? 4873;
+            // read port from config listen field, fall back to 4873
+            this._info.port = this._info.port ?? this._parsePortFromConfig();
             this._info.startTime = new Date();
             this._setState('running');
-            vscode.window.showWarningMessage(
-              'Verdaccio did not print its ready message in time. Assuming it is running on port ' +
-                this._info.port +
-                '.'
-            );
-            // Note: resolve happens via the readyListener above when state becomes 'running'
+            // Resolve directly in case the event listener doesn't fire synchronously
+            readyListener.dispose();
+            settle(() => resolve());
           }
         }, STARTUP_TIMEOUT_MS);
 
@@ -254,6 +251,26 @@ export class ServerManager implements IServerManager {
   }
 
   private _pendingOutput = '';
+
+  /**
+   * Tries to extract the port from the config's `listen` field (e.g. "0.0.0.0:4873").
+   * Returns 4873 as fallback.
+   */
+  private _parsePortFromConfig(): number {
+    try {
+      const configPath = this._configManager.getConfigPath();
+      // Synchronous read to avoid async complexity inside setTimeout
+      const fs = require('fs');
+      const content = fs.readFileSync(configPath, 'utf-8');
+      const match = content.match(/listen[:\s]+['"]?[^'"\s]*?:(\d+)/);
+      if (match) {
+        return parseInt(match[1], 10);
+      }
+    } catch {
+      // Config unreadable — use default
+    }
+    return 4873;
+  }
 
   private _detectReady(text: string): void {
     if (this._info.state !== 'starting') {
