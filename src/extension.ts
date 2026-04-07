@@ -364,7 +364,11 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       context.subscriptions.push({ dispose: () => unreg('verdaccio-mcp') });
     }
 
-    onboardingManager.checkAndPrompt().catch(() => {});
+    // Only run onboarding if auto-start is disabled (to avoid double-start)
+    const autoStartEnabled = vscode.workspace.getConfiguration('verdaccio').get<boolean>('server.autoStart', true);
+    if (!autoStartEnabled) {
+      onboardingManager.checkAndPrompt().catch(() => {});
+    }
   })().catch((err) => { console.error('[Verdaccio] Optional integrations failed:', err); });
 
   // --- Config existence check (fire-and-forget) ---

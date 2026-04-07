@@ -60,6 +60,7 @@ export class StatusViewProvider implements IStatusViewProvider {
 
   getChildren(): StatusItem[] {
     const state = this._serverManager.state;
+    console.log('[Verdaccio] StatusViewProvider.getChildren called, state:', state);
 
     switch (state) {
       case 'stopped':

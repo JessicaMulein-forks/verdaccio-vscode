@@ -57,7 +57,7 @@ export class ServerManager implements IServerManager {
     const port = this._parsePortFromConfig();
 
     // Kill any existing process on the target port
-    await this._killProcessOnPort(port);
+    // Not needed for in-process mode — just retry if port is busy
 
     this._setState('starting');
     this._outputBuffer = [];
@@ -107,34 +107,44 @@ export class ServerManager implements IServerManager {
       const app = await runServer(configPath);
       this._log('Verdaccio app created, starting listener...');
 
-      // Start listening
+      // Start listening — retry if port is temporarily busy from a previous instance
       await new Promise<void>((resolve, reject) => {
-        const timeout = setTimeout(() => {
-          reject(new Error('Verdaccio listen timeout after 10 seconds'));
-        }, 10000);
+        let attempts = 0;
+        const maxAttempts = 3;
 
-        try {
+        const tryListen = () => {
+          attempts++;
+          this._log(`Listen attempt ${attempts} on port ${port}...`);
+
           this._server = app.listen(port, '0.0.0.0', () => {
-            clearTimeout(timeout);
             this._info.port = port;
             this._info.startTime = new Date();
-            this._info.pid = process.pid; // in-process, use own pid
+            this._info.pid = process.pid;
             this._log(`Verdaccio listening on 0.0.0.0:${port}`);
             this._setState('running');
             resolve();
           });
 
-          this._server.on('error', (err: Error) => {
-            clearTimeout(timeout);
-            this._info.lastError = err.message;
-            this._log(`Server error: ${err.message}`);
-            this._setState('error');
-            reject(err);
+          this._server.on('error', (err: any) => {
+            this._server = undefined;
+            if (err.code === 'EADDRINUSE' && attempts < maxAttempts) {
+              this._log(`Port ${port} busy, retrying in 2s... (attempt ${attempts}/${maxAttempts})`);
+              setTimeout(tryListen, 2000);
+            } else {
+              if (err.code === 'EADDRINUSE') {
+                this._info.lastError = `Port ${port} is in use. Run: kill $(lsof -ti:${port})`;
+                this._log(`Port ${port} still busy after ${maxAttempts} attempts`);
+              } else {
+                this._info.lastError = err.message;
+                this._log(`Server error: ${err.message}`);
+              }
+              this._setState('error');
+              reject(err);
+            }
           });
-        } catch (err: any) {
-          clearTimeout(timeout);
-          reject(err);
-        }
+        };
+
+        tryListen();
       });
     } catch (err: any) {
       if (this._info.state !== 'error') {
@@ -214,24 +224,4 @@ export class ServerManager implements IServerManager {
     return 4873;
   }
 
-  private async _killProcessOnPort(port: number): Promise<void> {
-    try {
-      const { execSync } = require('child_process');
-      // Works on Linux and macOS
-      const result = execSync(`lsof -ti:${port} 2>/dev/null || fuser ${port}/tcp 2>/dev/null`, { encoding: 'utf-8' }).trim();
-      if (result) {
-        const pids = result.split(/\s+/).filter(Boolean);
-        for (const pid of pids) {
-          try {
-            this._log(`Killing existing process ${pid} on port ${port}`);
-            process.kill(parseInt(pid, 10), 'SIGTERM');
-          } catch { /* process may have already exited */ }
-        }
-        // Wait briefly for the port to be released
-        await new Promise(r => setTimeout(r, 1000));
-      }
-    } catch {
-      // No process on port or command not available — that's fine
-    }
-  }
 }
