@@ -295,8 +295,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         if (state === 'running') { npmrcManager.setRegistry(`http://localhost:${sm.port ?? 4873}/`); }
         else if (state === 'stopped') { npmrcManager.resetRegistry(); }
       }
-      if (state === 'running') { storageAnalyticsProvider.refresh(); registryHealthProvider.startMonitoring(); }
-      else if (state === 'stopped' || state === 'error') { registryHealthProvider.stopMonitoring(); }
+      if (state === 'running') { storageAnalyticsProvider.refresh(); cacheViewProvider.refresh(); registryHealthProvider.startMonitoring(); }
+      else if (state === 'stopped' || state === 'error') { registryHealthProvider.stopMonitoring(); storageAnalyticsProvider.refresh(); cacheViewProvider.refresh(); }
     } catch (err) {
       console.error('[Verdaccio] State change handler error:', err);
     }

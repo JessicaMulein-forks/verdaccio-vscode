@@ -68,6 +68,8 @@ export class RegistryHealthProvider implements IRegistryHealthProvider {
   constructor(serverManager: IServerManager, configManager: IConfigManager) {
     this._serverManager = serverManager;
     this._configManager = configManager;
+    // Refresh tree whenever server state changes so "Server not running" updates
+    this._serverManager.onDidChangeState(() => this.refresh());
   }
 
   refresh(): void {
