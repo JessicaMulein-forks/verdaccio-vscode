@@ -75,14 +75,15 @@ describe('StatusViewProvider', () => {
    * Tree item rendering for each server state
    */
   describe('tree item rendering per state', () => {
-    it('returns "Status: Stopped" when state is stopped', () => {
+    it('returns "Status: Stopped" and Start action when state is stopped', () => {
       const mgr = createMockServerManager({ state: 'stopped' });
       const provider = new StatusViewProvider(mgr);
 
       const items = provider.getChildren();
       const summaries = itemSummaries(items);
 
-      expect(summaries).toEqual([{ label: 'Status', description: 'Stopped' }]);
+      expect(summaries[0]).toEqual({ label: 'Status', description: 'Stopped' });
+      expect(summaries[1]).toEqual({ label: 'Start Verdaccio', description: undefined });
     });
 
     it('returns "Status: Starting..." when state is starting', () => {
@@ -107,23 +108,26 @@ describe('StatusViewProvider', () => {
       const items = provider.getChildren();
       const summaries = itemSummaries(items);
 
-      expect(summaries.length).toBe(4);
+      expect(summaries.length).toBe(6);
       expect(summaries[0]).toEqual({ label: 'Status', description: 'Running' });
       expect(summaries[1]).toEqual({ label: 'Address', description: '0.0.0.0:4873' });
       // Uptime is dynamic, just verify it exists and matches the format
       expect(summaries[2].label).toBe('Uptime');
       expect(summaries[2].description).toMatch(/^\d+h \d+m \d+s$/);
       expect(summaries[3]).toEqual({ label: 'Packages', description: '0' });
+      expect(summaries[4]).toEqual({ label: 'Stop Verdaccio', description: undefined });
+      expect(summaries[5]).toEqual({ label: 'Restart Verdaccio', description: undefined });
     });
 
-    it('returns "Status: Error" when state is error', () => {
+    it('returns "Status: Error" and Start action when state is error', () => {
       const mgr = createMockServerManager({ state: 'error' });
       const provider = new StatusViewProvider(mgr);
 
       const items = provider.getChildren();
       const summaries = itemSummaries(items);
 
-      expect(summaries).toEqual([{ label: 'Status', description: 'Error' }]);
+      expect(summaries[0]).toEqual({ label: 'Status', description: 'Error' });
+      expect(summaries[1]).toEqual({ label: 'Start Verdaccio', description: undefined });
     });
   });
 

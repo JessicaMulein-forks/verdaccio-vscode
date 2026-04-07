@@ -49,9 +49,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
   // --- Instantiate core managers ---
   const configManager = new ConfigManager();
-  const sm = new ServerManager(configManager);
-  serverManager = sm;
   const logManager = new LogManager();
+  const sm = new ServerManager(configManager, (msg) => logManager.log(msg));
+  serverManager = sm;
   const statusViewProvider = new StatusViewProvider(sm);
   const cacheViewProvider = new CacheViewProvider(configManager);
   const npmrcManager = new NpmrcManager(sm, context.secrets);
@@ -81,17 +81,14 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   profileStatusBarItem.command = 'verdaccio.switchProfile';
   profileManager.setStatusBarItem(profileStatusBarItem);
 
-  logManager.log('Extension activated');
+  logManager.log(`Extension activated (v${context.extension?.packageJSON?.version ?? 'unknown'})`);
 
   // --- Register all commands ---
-  let startCmd: vscode.Disposable;
-  try {
-    startCmd = vscode.commands.registerCommand('verdaccio.start', async () => {
-      console.log('[Verdaccio] >>> START COMMAND HANDLER ENTERED <<<');
-      logManager.log('Start command invoked');
-      try {
-        const exists = await configManager.configExists();
-        logManager.log(`Config exists: ${exists}`);
+  const startCmd = vscode.commands.registerCommand('verdaccio.start', async () => {
+    logManager.log('Start command invoked');
+    try {
+      const exists = await configManager.configExists();
+      logManager.log(`Config exists: ${exists}`);
       if (!exists) {
         logManager.log('No config found, prompting to generate...');
         const action = await vscode.window.showWarningMessage(
@@ -101,16 +98,17 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         if (action === 'Generate') {
           await configManager.generateDefaultConfig();
           logManager.log('Default config generated');
-        } else { return; }
+        } else {
+          return;
+        }
       }
       logManager.log('Starting Verdaccio server...');
       await sm.start();
-      logManager.log(`Server running on port ${sm.port}`);
+      logManager.log(`Start returned, state: ${sm.state}, port: ${sm.port}`);
     } catch (err: any) {
-      if (err.code === 'ENOENT' || (err.message && err.message.includes('ENOENT'))) {
-        logManager.log('Verdaccio binary not found (not installed)');
+      if (err.message && err.message.includes('not installed')) {
         const action = await vscode.window.showErrorMessage(
-          'Verdaccio is not installed. Would you like to install it globally?',
+          'Verdaccio is not installed. Would you like to install it?',
           'Install (npm)', 'Cancel',
         );
         if (action === 'Install (npm)') {
@@ -118,7 +116,6 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
           terminal.show();
           terminal.sendText('npm install -g verdaccio');
           logManager.log('Installing verdaccio globally via npm...');
-          vscode.window.showInformationMessage('Installing Verdaccio... Run "Verdaccio: Start" again after installation completes.');
         }
       } else {
         logManager.log(`Failed to start: ${err.message}`);
@@ -126,11 +123,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       }
     }
   });
-    logManager.log('Start command registered');
-  } catch (regErr: any) {
-    logManager.log(`FAILED to register start command: ${regErr.message}`);
-    startCmd = { dispose: () => {} } as vscode.Disposable;
-  }
+  logManager.log('Start command registered');
   const stopCmd = vscode.commands.registerCommand('verdaccio.stop', () => { logManager.log('Stopping server...'); return sm.stop(); });
   const restartCmd = vscode.commands.registerCommand('verdaccio.restart', async () => {
     try { logManager.log('Restarting server...'); await sm.restart(); } catch (err: any) { vscode.window.showErrorMessage(`Failed to restart Verdaccio: ${err.message}`); }
@@ -294,10 +287,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   const stateChangeDisposable = sm.onDidChangeState((state: ServerState) => {
     try {
       logManager.log(`Server state: ${state}${state === 'running' ? ` (port ${sm.port})` : ''}`);
+      logManager.log(`sm.state=${sm.state} sm.port=${sm.port}`);
       updateStatusBar(statusBarItem, state, sm.port);
-      if ((state === 'starting' || state === 'running') && (sm as any)._process) {
-        logManager.attach((sm as any)._process);
-      }
+      statusViewProvider.refresh();
       const autoSet = vscode.workspace.getConfiguration('verdaccio').get<boolean>('autoSetRegistry', false);
       if (autoSet) {
         if (state === 'running') { npmrcManager.setRegistry(`http://localhost:${sm.port ?? 4873}/`); }
@@ -326,7 +318,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
     try {
       if (registerExtension) {
-        await registerExtension('verdaccio-mcp', {
+        // Wrap in a timeout — registerExtension can hang in devcontainers
+        const registrationPromise = registerExtension('verdaccio-mcp', {
           displayName: 'Verdaccio Registry', status: 'ok', settingsQuery: 'verdaccio',
           actions: [
             { label: '$(play) Start Server', command: 'verdaccio.start', description: 'Start the Verdaccio server' },
@@ -348,6 +341,11 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
             { label: '$(arrow-swap) Switch Profile', command: 'verdaccio.switchProfile', description: 'Switch .npmrc profile' },
           ],
         });
+        // Don't await — let it complete in background. Race with a 5s timeout.
+        Promise.race([
+          registrationPromise,
+          new Promise((_, reject) => setTimeout(() => reject(new Error('ACS registration timeout')), 5000)),
+        ]).catch((err) => console.error('[Verdaccio] ACS registration:', err.message));
       }
     } catch (err) { console.error('[Verdaccio] ACS registration failed:', err); }
 
@@ -404,6 +402,23 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   );
 
   logManager.log('Ready');
+
+  // Auto-start verdaccio if config exists (default: true)
+  const autoStart = vscode.workspace.getConfiguration('verdaccio').get<boolean>('server.autoStart', true);
+  if (autoStart) {
+    setTimeout(async () => {
+      try {
+        const exists = await configManager.configExists();
+        if (exists) {
+          logManager.log('Auto-starting server...');
+          await vscode.commands.executeCommand('verdaccio.start');
+        }
+      } catch (err: any) {
+        logManager.log(`Auto-start failed: ${err.message}`);
+      }
+    }, 3000);
+  }
+
   console.log('[Verdaccio] activate() completed successfully');
 }
 
@@ -412,6 +427,7 @@ function updateStatusBar(
   state: ServerState,
   port: number | undefined,
 ): void {
+  console.log(`[Verdaccio] updateStatusBar called: state=${state} port=${port}`);
   switch (state) {
     case 'running':
       item.text = `$(server-process) Verdaccio :${port ?? '?'}`;

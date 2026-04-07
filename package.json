@@ -2,7 +2,7 @@
   "name": "vscode-mcp-acs-verdaccio",
   "displayName": "MCP ACS Verdaccio",
   "description": "Manage a local Verdaccio npm registry from VS Code with full AI agent integration through MCP. Part of the Digital Defiance AI Capabilities Suite.",
-  "version": "0.0.19",
+  "version": "1.0.0",
   "packageManager": "yarn@4.12.0",
   "publisher": "DigitalDefiance",
   "homepage": "https://github.com/Digital-Defiance/vscode-mcp-acs-verdaccio",
@@ -260,7 +260,7 @@
         },
         "verdaccio.server.autoStart": {
           "type": "boolean",
-          "default": false,
+          "default": true,
           "markdownDescription": "Automatically start the Verdaccio server when the extension activates."
         },
         "verdaccio.server.port": {
@@ -671,7 +671,7 @@
     "test": "vitest --run",
     "test:unit": "vitest --run --exclude='**/*.e2e.test.ts'",
     "test:property": "vitest --run --include='**/*.property.test.ts'",
-    "test:e2e": "vitest --run --include='**/*.e2e.test.ts'",
+    "test:e2e": "vitest --run --config vitest.e2e.config.ts",
     "test:watch": "vitest",
     "test:coverage": "vitest --run --coverage",
     "test:all": "vitest --run",
@@ -680,7 +680,7 @@
   },
   "dependencies": {
     "@ai-capabilities-suite/mcp-client-base": "^1.0.2",
-    "@ai-capabilities-suite/vscode-shared-status-bar": "^1.0.22",
+    "@ai-capabilities-suite/vscode-shared-status-bar": "1.0.23",
     "js-yaml": "^4.1.0"
   },
   "devDependencies": {

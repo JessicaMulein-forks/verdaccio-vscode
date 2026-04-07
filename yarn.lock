@@ -14,12 +14,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@ai-capabilities-suite/vscode-shared-status-bar@npm:^1.0.22":
-  version: 1.0.22
-  resolution: "@ai-capabilities-suite/vscode-shared-status-bar@npm:1.0.22"
+"@ai-capabilities-suite/vscode-shared-status-bar@npm:1.0.23":
+  version: 1.0.23
+  resolution: "@ai-capabilities-suite/vscode-shared-status-bar@npm:1.0.23"
   peerDependencies:
     vscode: ^1.80.0
-  checksum: 10c0/e864f03abac26e1ce34bda02ec946e888d72b13d6b01e26938e2a3e68a10986cc7842726acd909e0a88a2b09805381debae75c8900ab35c4a838edff94d0246f
+  checksum: 10c0/f0e6bb9d8a62efd9f0a30f5437f87d3ab5b22e09455513ea24f6da63a49cf0399b0496856922ca895f5ac8c279b1f7bac8ade69c000ed24d551745e2d05c2e73
   languageName: node
   linkType: hard
 
@@ -5325,7 +5325,7 @@ __metadata:
   resolution: "vscode-mcp-acs-verdaccio@workspace:."
   dependencies:
     "@ai-capabilities-suite/mcp-client-base": "npm:^1.0.2"
-    "@ai-capabilities-suite/vscode-shared-status-bar": "npm:^1.0.22"
+    "@ai-capabilities-suite/vscode-shared-status-bar": "npm:1.0.23"
     "@secretlint/secretlint-formatter-sarif": "npm:^11.5.0"
     "@secretlint/secretlint-rule-no-dotenv": "npm:^11.5.0"
     "@secretlint/secretlint-rule-preset-recommend": "npm:^11.4.1"

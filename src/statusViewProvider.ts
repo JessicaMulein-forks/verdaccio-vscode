@@ -16,10 +16,13 @@ export function formatUptime(startTime: Date, now: Date = new Date()): string {
 }
 
 export class StatusItem extends vscode.TreeItem {
-  constructor(label: string, description?: string) {
+  constructor(label: string, description?: string, command?: vscode.Command) {
     super(label, vscode.TreeItemCollapsibleState.None);
     if (description !== undefined) {
       this.description = description;
+    }
+    if (command) {
+      this.command = command;
     }
   }
 }
@@ -60,7 +63,10 @@ export class StatusViewProvider implements IStatusViewProvider {
 
     switch (state) {
       case 'stopped':
-        return [new StatusItem('Status', 'Stopped')];
+        return [
+          new StatusItem('Status', 'Stopped'),
+          new StatusItem('Start Verdaccio', undefined, { command: 'verdaccio.start', title: 'Start' }),
+        ];
 
       case 'starting':
         return [new StatusItem('Status', 'Starting...')];
@@ -79,11 +85,16 @@ export class StatusViewProvider implements IStatusViewProvider {
         }
 
         items.push(new StatusItem('Packages', String(this._packageCount)));
+        items.push(new StatusItem('Stop Verdaccio', undefined, { command: 'verdaccio.stop', title: 'Stop' }));
+        items.push(new StatusItem('Restart Verdaccio', undefined, { command: 'verdaccio.restart', title: 'Restart' }));
         return items;
       }
 
       case 'error':
-        return [new StatusItem('Status', 'Error')];
+        return [
+          new StatusItem('Status', 'Error'),
+          new StatusItem('Start Verdaccio', undefined, { command: 'verdaccio.start', title: 'Start' }),
+        ];
 
       default:
         return [new StatusItem('Status', 'Unknown')];
