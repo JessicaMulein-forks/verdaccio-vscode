@@ -64,8 +64,14 @@ export class ServerManager implements IServerManager {
   }
 
   async start(): Promise<void> {
+    // If stuck in 'starting' with no process, reset to stopped
+    if (this._info.state === 'starting' && !this._process) {
+      this._setState('stopped');
+      this._resetInfo();
+    }
+
     if (this._info.state === 'running' || this._info.state === 'starting') {
-      vscode.window.showWarningMessage('Verdaccio server is already running.');
+      vscode.window.showWarningMessage(`Verdaccio server is already ${this._info.state}.`);
       return;
     }
 
@@ -87,6 +93,7 @@ export class ServerManager implements IServerManager {
         const child = spawn('verdaccio', ['--config', configPath]);
         this._process = child;
         this._info.pid = child.pid;
+        console.log('[Verdaccio] Spawned verdaccio, pid:', child.pid, 'config:', configPath);
 
         // Listen for the ready transition to resolve the promise
         const readyListener = this.onDidChangeState((state) => {
@@ -98,12 +105,14 @@ export class ServerManager implements IServerManager {
 
         child.stdout?.on('data', (data: Buffer) => {
           const text = data.toString();
+          console.log('[Verdaccio] stdout:', text.substring(0, 200));
           this._bufferOutput(text);
           this._detectReady(text);
         });
 
         child.stderr?.on('data', (data: Buffer) => {
           const text = data.toString();
+          console.log('[Verdaccio] stderr:', text.substring(0, 200));
           this._bufferOutput(text);
           this._detectReady(text);
         });
@@ -137,6 +146,7 @@ export class ServerManager implements IServerManager {
 
         // Start a timeout so we don't stay in 'starting' forever
         this._startupTimer = setTimeout(() => {
+          console.log('[Verdaccio] Startup timeout fired, state:', this._info.state, 'settled:', settled);
           try {
             if (this._info.state === 'starting') {
               this._info.port = this._info.port ?? this._parsePortFromConfig();
@@ -145,7 +155,8 @@ export class ServerManager implements IServerManager {
               readyListener.dispose();
               settle(() => resolve());
             }
-          } catch {
+          } catch (e) {
+            console.error('[Verdaccio] Timeout handler error:', e);
             // If anything fails in the timeout, still resolve so we don't hang
             this._info.port = this._info.port ?? 4873;
             this._info.startTime = new Date();

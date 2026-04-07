@@ -61,6 +61,7 @@ export class RegistryHealthProvider implements IRegistryHealthProvider {
   private _healthStatuses: Map<string, UplinkHealthStatus> = new Map();
   private _monitoringInterval: ReturnType<typeof setInterval> | undefined;
   private _pingInFlight = false;
+  private _allUnreachableWarningShown = false;
   private readonly _onDidChangeTreeData = new vscode.EventEmitter<HealthItem | undefined>();
   readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
 
@@ -76,21 +77,23 @@ export class RegistryHealthProvider implements IRegistryHealthProvider {
   startMonitoring(): void {
     if (this._monitoringInterval) { return; }
 
-    const intervalMs = 30000; // default 30s
+    const intervalMs = 60000; // ping every 60s to avoid thrashing
     this._monitoringInterval = setInterval(async () => {
-      if (this._pingInFlight) { return; } // skip if previous ping is still running
+      if (this._pingInFlight) { return; }
       this._pingInFlight = true;
       try {
-        await this._pingUplinks();
-        this.refresh();
+        const changed = await this._pingUplinks();
+        if (changed) { this.refresh(); }
       } finally {
         this._pingInFlight = false;
       }
     }, intervalMs);
 
-    // Initial ping
-    this._pingInFlight = true;
-    this._pingUplinks().then(() => this.refresh()).finally(() => { this._pingInFlight = false; });
+    // Initial ping after a short delay to let the UI settle
+    setTimeout(() => {
+      this._pingInFlight = true;
+      this._pingUplinks().then((changed) => { if (changed) { this.refresh(); } }).finally(() => { this._pingInFlight = false; });
+    }, 3000);
   }
 
   stopMonitoring(): void {
@@ -172,7 +175,8 @@ export class RegistryHealthProvider implements IRegistryHealthProvider {
     return [];
   }
 
-  private async _pingUplinks(): Promise<void> {
+  private async _pingUplinks(): Promise<boolean> {
+    let changed = false;
     try {
       const config = await this._configManager.readConfig();
       const uplinks = config.uplinks || {};
@@ -181,6 +185,7 @@ export class RegistryHealthProvider implements IRegistryHealthProvider {
         const existing = this._healthStatuses.get(name);
         const failedCount = existing?.failedRequestCount ?? 0;
         const cacheHitRate = existing?.cacheHitRate ?? 0;
+        const oldState = existing?.state;
 
         try {
           const start = Date.now();
@@ -196,22 +201,26 @@ export class RegistryHealthProvider implements IRegistryHealthProvider {
             failedRequestCount: failedCount,
             state,
           });
+          if (state !== oldState) { changed = true; }
         } catch {
+          const state = computeHealthState(0, failedCount + 1, true);
           this._healthStatuses.set(name, {
             uplinkName: name,
             url: uplink.url,
             latencyMs: undefined,
             cacheHitRate,
             failedRequestCount: failedCount + 1,
-            state: computeHealthState(0, failedCount + 1, true),
+            state,
           });
+          if (state !== oldState) { changed = true; }
         }
       }
 
-      // Check if all uplinks are unreachable
+      // Show "all unreachable" warning only once
       const allUnreachable = this._healthStatuses.size > 0 &&
         [...this._healthStatuses.values()].every((s) => s.state === 'unreachable');
-      if (allUnreachable) {
+      if (allUnreachable && !this._allUnreachableWarningShown) {
+        this._allUnreachableWarningShown = true;
         const action = await vscode.window.showWarningMessage(
           'All registry uplinks are unreachable. Consider enabling offline mode.',
           'Enable Offline Mode',
@@ -220,10 +229,13 @@ export class RegistryHealthProvider implements IRegistryHealthProvider {
           await this._configManager.enableOfflineMode();
           vscode.window.showInformationMessage('Offline mode enabled.');
         }
+      } else if (!allUnreachable) {
+        this._allUnreachableWarningShown = false;
       }
     } catch {
       // Config read failed — skip this ping cycle
     }
+    return changed;
   }
 
   private _httpPing(url: string): Promise<void> {

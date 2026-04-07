@@ -84,9 +84,14 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   logManager.log('Extension activated');
 
   // --- Register all commands ---
-  const startCmd = vscode.commands.registerCommand('verdaccio.start', async () => {
-    try {
-      const exists = await configManager.configExists();
+  let startCmd: vscode.Disposable;
+  try {
+    startCmd = vscode.commands.registerCommand('verdaccio.start', async () => {
+      console.log('[Verdaccio] >>> START COMMAND HANDLER ENTERED <<<');
+      logManager.log('Start command invoked');
+      try {
+        const exists = await configManager.configExists();
+        logManager.log(`Config exists: ${exists}`);
       if (!exists) {
         logManager.log('No config found, prompting to generate...');
         const action = await vscode.window.showWarningMessage(
@@ -121,6 +126,11 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       }
     }
   });
+    logManager.log('Start command registered');
+  } catch (regErr: any) {
+    logManager.log(`FAILED to register start command: ${regErr.message}`);
+    startCmd = { dispose: () => {} } as vscode.Disposable;
+  }
   const stopCmd = vscode.commands.registerCommand('verdaccio.stop', () => { logManager.log('Stopping server...'); return sm.stop(); });
   const restartCmd = vscode.commands.registerCommand('verdaccio.restart', async () => {
     try { logManager.log('Restarting server...'); await sm.restart(); } catch (err: any) { vscode.window.showErrorMessage(`Failed to restart Verdaccio: ${err.message}`); }
