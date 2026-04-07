@@ -55,6 +55,10 @@ export class ServerManager implements IServerManager {
 
     const configPath = this._configManager.getConfigPath();
     const port = this._parsePortFromConfig();
+
+    // Kill any existing process on the target port
+    await this._killProcessOnPort(port);
+
     this._setState('starting');
     this._outputBuffer = [];
 
@@ -208,5 +212,26 @@ export class ServerManager implements IServerManager {
       if (match) { return parseInt(match[1], 10); }
     } catch { /* use default */ }
     return 4873;
+  }
+
+  private async _killProcessOnPort(port: number): Promise<void> {
+    try {
+      const { execSync } = require('child_process');
+      // Works on Linux and macOS
+      const result = execSync(`lsof -ti:${port} 2>/dev/null || fuser ${port}/tcp 2>/dev/null`, { encoding: 'utf-8' }).trim();
+      if (result) {
+        const pids = result.split(/\s+/).filter(Boolean);
+        for (const pid of pids) {
+          try {
+            this._log(`Killing existing process ${pid} on port ${port}`);
+            process.kill(parseInt(pid, 10), 'SIGTERM');
+          } catch { /* process may have already exited */ }
+        }
+        // Wait briefly for the port to be released
+        await new Promise(r => setTimeout(r, 1000));
+      }
+    } catch {
+      // No process on port or command not available — that's fine
+    }
   }
 }

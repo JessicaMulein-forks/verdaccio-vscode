@@ -133,10 +133,11 @@ export class RegistryHealthProvider implements IRegistryHealthProvider {
   async getChildren(element?: HealthItem): Promise<HealthItem[]> {
     if (this._serverManager.state !== 'running') {
       if (!element) {
+        const stateMsg = this._serverManager.state === 'error' ? 'Server error' : 'Server not running';
         return [{
           type: 'healthMetric',
           label: 'Status',
-          value: 'Server not running',
+          value: stateMsg,
         }];
       }
       return [];
